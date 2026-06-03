@@ -28,12 +28,12 @@
 ### 1. 語言初始化
 
 - `HCS_DEFAULT_LANG`(預設 `'zh-tw'`)、`HCS_LANG_OPTIONS`(預設 `['zh-tw','en-us']`)由 `HcsPlatformProviderModule` 提供。
-- `appInitializerFactory` 決定啟動語言,**順序**:`localStorage['hcs-lang']` → `navigator.languages` 比對支援清單 → `HCS_DEFAULT_LANG`;接著 `setDefaultLang` + 設定 `DateAdapter` / `DatetimeAdapter` locale。
+- `appInitializerFactory` 決定啟動語言,**順序**:`localStorage['hcs-lang']` → `navigator.languages` 比對支援清單 → `HCS_DEFAULT_LANG`;接著 `setDefaultLang` + **`translate.use(lang)` 實際套用**,並設定 `DateAdapter` / `DatetimeAdapter` locale。整個 init 等 `use()` 完成才 resolve——`setDefaultLang` 本身不代表初始化完成。
 - 切語言時 `onLangChange` 同步日期 locale;`LanguageOptionService.getLangAsync()` 供查語言清單。
 
 ### 2. 字典載入與合併(`PlatformTranslateLoader`)
 
-- 主檔 + 各 `I18N_INDEX` 模組字典**並行載入**,再以 `pathObject()` 遞迴合併進主字典。
+- **先載入主檔**,主檔回應後再 `combineLatest` **並行**載入各 `I18N_INDEX` 模組字典(模組彼此並行、但主檔 vs 模組是串行),最後以 `pathObject()` 遞迴合併進主字典。
 - **`I18N_INDEX`**(`InjectionToken`,multi):各模組在 `forRoot()` 用 `{ provide: I18N_INDEX, useValue: '...', multi: true }` 註冊自己的字典目錄。現有:`basic`、`system-logging`、`app-update`、`code-table`、`approval-flow`、`third-party-login`、`two-factor-authentication`、`two-factor-authentication-google`。
 - **`fixObject()`**:含 `.` 的 key(如 `"PlatformModule.Test.CustomerType"`)自動展開成巢狀。
 
@@ -52,16 +52,18 @@
 ### 4. 使用方式
 
 - **ngx-translate `translate` pipe**:`{{ 'key' | translate }}`;帶參 `{{ 'key' | translate:params }}`。
-- **平台自訂 pipe**(`projects/core/hcs-components/*.pipe.ts`):
+- **平台自訂 pipe**:
 
   | pipe | 用法 | 對應 key |
   |---|---|---|
   | `enumTranslate` | `value \| enumTranslate:'EnumType'` | `enums.{EnumType}.{value}` |
   | `errorMessage` | `errors \| errorMessage` | `errors.{key}`(驗證錯誤) |
   | `permissionTranslate` | `perm \| permissionTranslate:'CodeType'` | `permissions.{code}.{perm}` |
-  | `translateIfExists` | `key \| translateIfExists:'default'` | key 不存在時回預設值 |
+  | `translateIfExists` | `key \| translateIfExists:'default':params` | key 不存在時回預設值;第三參 `params` 同 `translate` 可內插 |
   | `i18nNames` | `obj \| i18nNames` | 從物件的 Lang/Text 清單取當前語言(非字典) |
   | `enumOptions` | `Enum \| enumOptions` | 轉 `{value,text}[]`(純前端,不翻譯) |
+
+  > **查無 key 時的 fallback 各 pipe 不一致**:`enumTranslate` 回原 `value`;`permissionTranslate` 依序找 `permissions.{code}.{perm}` → `permissions.{perm}`,兩者皆無回 `perm` 原字串;`translateIfExists` 回你給的 default。
 
 - **`TranslateService`**(component/service 注入):`.get()`(回 Observable)、`.instant()`(同步)、`.onLangChange`(切語言事件)。
 
@@ -79,7 +81,7 @@
   - 讀 `WebRootPath/assets/i18n` 下**所有** `{lang}.json`(含模組子目錄,`SearchOption.AllDirectories`),與前端**同一份字典**。
   - `WalkNode` 遞迴**扁平化**成 `Map<點路徑, 值>`;`static` 快取(依 lang + 檔案 mtime,改檔自動失效)。
   - **載入時 eager 解析 link**(`ResolveLinks`):扁平化後一次解完 `#{}` / `@{}`,快取存的是**成品字串**(已無 link 語法)。子樹 ref(`#{models.Test}`)會把目標子樹的葉節點**展開**到來源 prefix 底下,所以 `models.PlatformModule.Test.Customer.Name` 等都查得到。`{{key}}` 佔位**刻意保留**,留到 `Get` 時用呼叫端參數替換。
-  - 語言來自 `IClientInfo.GetClientLang()`(前端請求帶 header `X-HCS-Lang`)。
+  - 語言來自 `IClientInfo.GetClientLang()`(前端請求帶 header `X-HCS-Lang`);**header 缺少時固定 fallback `zh-tw`**,與前端 `HCS_DEFAULT_LANG` 無關。
   - `Get`:查 map,有 `parameters` 則逐個把 `{{key}}` 替換成值;**查無 key 回傳 key 原樣**。
 - **DI**:`services.AddScoped<ITranslate, JsonFileTranslate>()`。
 - **典型用途**:資料匯出(Excel)時翻譯欄位值,例 `translate.Get($"enums.UserStatus.{v}")`、`translate.Get("common.true")`。

@@ -67,6 +67,8 @@ pipe.SwitchCase(
 
 跑完 `pipe` 得到 `result`,依序測 `when(result)`,命中就走該 case 的子 pipe,全沒中走 default。**驗證流程就靠它**:有錯 → `BadRequest`、無錯 → 繼續寫 DB(見 [validation-errors](validation-errors.md))。
 
+> 子 pipe 的型別是 `DIPipeBuilder<TIn, TOut, TNext>`:builder 拿到的起點 pipe 會吐出 `result`(`TOut`),在它上面 `.Pipe` 疊步驟即可直接拿到 `result`——這就是 `RunValidation` 能寫 `def.Pipe(y => y.ValidationErrors)` 的原因。別誤以為 case builder 收的是 `DIPipe<TOut, …>`。
+
 ---
 
 ## 子管線:`DIPipeBuilder`
@@ -139,4 +141,4 @@ builder.Unique(c => c.AddProperty(x => x.Name));
 
 ## 其他 pipe 形式
 
-SDK 另有 `IDataPipe<T>` 體系,用於 `ConfigDataPipe` 的資料處理鏈,建在更上層,與這裡的 `DIPipe` compose 基元是不同層次。
+SDK 另有 `IDataPipe<T>` / `IDataFilterPipe<T>` 體系,用於 entity 寫入 / 查詢的跨切面 hook(多租戶過濾、稽核、自動蓋欄位),建在更上層,與這裡的 `DIPipe` compose 基元是不同層次——見 [data-pipes](data-pipes.md)。

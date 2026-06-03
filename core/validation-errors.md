@@ -40,7 +40,10 @@ options.ConfigPostApi(x => x.OnValidate(v => v.Pipe(
 ```csharp
 c.AddErrorFor(x => x.Name, "required");             // Title="Name", Message="required"
 c.AddErrorFor(x => x.Name, "duplicate", dataJson);  // 第三參數 → Data
+c.AddErrorFor(x => x.Address.City, "required");     // 巢狀運算式 → Title="Address.City"
 ```
+
+> 巢狀運算式的 `Title` 是用 `.` 串起整條路徑(`Address.City`),前端欄位名 i18n key 因此變成 `models.{functionName}.Address.City`——要翻得出來,字典裡得照這條巢狀路徑建 key。
 
 **`ValidationError` 三個欄位:**
 
@@ -64,7 +67,11 @@ c.AddError(new() { Title = "Name", Message = "tooLong",   Data = "{\"who\":\"ali
 | 名稱 | 用途 | 掛法 |
 |---|---|---|
 | `Unique` / `UniqueValidation` | 欄位唯一性(查 DB) | `apiBuildContext.UniqueValidation(c => c.AddProperty(x => x.Name))`(一次掛 Post+Put,自動設 `IsCreate`) |
-| `CheckRefForDelete` | 刪除前檢查關聯,有關聯則擋 | `apiBuildContext.CheckRefForDelete(x => x.Orders)` |
+| `CheckRefForDelete` | 刪除前檢查**指定**關聯,有關聯則擋 | `apiBuildContext.CheckRefForDelete(x => x.Orders)` |
+| `CheckAllRefForDelete` | 刪除前**自動掃 entity 所有導覽集合**,任一有關聯就擋,免逐個指定 | `ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`(只有 pipe 層級,無 `apiBuildContext.` 便利封裝) |
+
+> **複合唯一鍵**:`AddProperty` 可連續鏈接,判定「多欄組合」唯一,如 `c => c.AddProperty(x => x.Platform).AddProperty(x => x.Product).AddProperty(x => x.Version)`。
+> **`Unique` 的 `NullCheck`**:預設 `false` 時,若設定的 property **全為 null** 會直接跳過唯一性檢查;要讓「全 null 也算重複」,在 configurator 設 `NullCheck = true`。
 
 ### 2. API 回應形狀
 

@@ -72,7 +72,7 @@ options.ConfigPostApi(x =>
 - 內建按 `OrgId` 自動過濾。
 - `AllowChildOrganizationData(roleName)` — 一行宣告「擁有此 role 的使用者可看子組織資料」。
 
-(`Organization` / `PlatformUser` / `PlatformGroup` 三層 entity 由 `Hcs.PlatformModule.Basic` 提供。)
+機制(查詢一律過 filter pipe、寫入一律跑 Pre/Post、`ITable<T>` 執行載體)見 [core/data-pipes.md](core/data-pipes.md)。(`Organization` / `PlatformUser` / `PlatformGroup` 三層 entity 由 `Hcs.PlatformModule.Basic` 提供。)
 
 ### 4. OData 查詢
 
@@ -155,7 +155,7 @@ options.ConfigPostApi(x =>
 
 `Doc` 欄連到有 doc 涵蓋的 project(來源是各 doc 的維護端清單);`—` 代表尚無對應 doc。`Hcs.Platform.Core` 與前端 `core` 是 kitchen-sink 專案,只被 Core 基礎層各篇切片涵蓋一部分。
 
-> 目前已寫的深入文件僅 2FA、Pipe、驗證錯誤、i18n 等少數幾篇,**陸續補齊中、不代表平台功能範圍**——平台完整能力見[平台能力](#平台能力)。
+> 目前已寫的深入文件僅 entity-api、Pipe、Data Pipes、驗證錯誤、i18n、2FA 等少數幾篇,**陸續補齊中、不代表平台功能範圍**——平台完整能力見[平台能力](#平台能力)。
 
 ### 核心
 
@@ -163,8 +163,8 @@ options.ConfigPostApi(x =>
 |---|---|---|
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | — |
-| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [pipe](core/pipe.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
-| `Hcs.Platform.Data` | 資料層共用契約(`IScopedDbContext`、查詢 context 等) | — |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
 | `Hcs.Platform.Webapi` | 平台自帶的示範 host | — |
 | `Hcs.Platform.Core.Tests` / `Hcs.Platform.Flow.Tests` | 測試 | — |

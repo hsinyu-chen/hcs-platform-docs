@@ -58,6 +58,7 @@ OData 驗證 → 查詢 → [OnQueryed] → (投影) → 套用 $filter/$select/
 - **`OnValidate` 是閘門**:收集到任何錯誤就回 **400**(`hcs-error-summary` 顯示,見 [validation-errors](validation-errors.md)),**後面的寫入 / 回應步驟完全不跑**。靠的是 [pipe](pipe.md) 的 `SwitchCase`。
 - **生命週期成對**:`On{X}ing` 在內建動作**之前**、`On{X}ed` 在**之後**(Creating/Created、Updating/Updated、Deleting/Deleted)。`OnModelGeted` 在 model 反序列化後、`OnKeyGeted` 在主鍵取出後、`OnQueryed` 用來改 `IQueryable`(加條件)。
 - **`UseDefaultSave(false)`**:拔掉內建的寫入 / 更新 / 刪除步驟——這時你得在 `On{X}ing` 自己處理持久化(用於非標準存檔)。
+- **內建寫入 / 查詢步驟其實是操作 [`ITable<T>`](data-pipes.md)**:所以每支端點會自動套該 entity 的 data pipe——查詢自動過多租戶 filter(`OnQueryed` 拿到的已是過濾後的 `IQueryable`)、寫入自動跑 audit / OrgId 等 Pre/Post。這層是 **entity 型別層級**的橫切,與這裡的 per-API hook 不同層,見 [data-pipes](data-pipes.md)。
 
 ---
 
