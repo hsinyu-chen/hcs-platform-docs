@@ -81,6 +81,7 @@ options.ConfigPostApi(x =>
 ### 5. 驗證與授權
 
 - **角色即時注入**:token 驗證時把使用者 role code 注入 claim——改權限不必重發 token。
+- **權限樹**:`AddModuleFuncion` 宣告功能權限,五支 entity API 自動掛 View / Create / Modify / Delete,前後端靠權限字串對齊(見 [core/permissions.md](core/permissions.md))。
 - **強制失效**:比對 token `notBefore` 與 `UserDataChangeTime`,可單方面標記舊 token 過期。
 - **後端驗證錯誤**:`OnValidate` 收集錯誤 → 400 → 前端 `hcs-error-summary` 顯示(見 [core/validation-errors.md](core/validation-errors.md))。
 
@@ -91,7 +92,7 @@ options.ConfigPostApi(x =>
 ### 7. 其他基礎建設
 
 - 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
-- 檔案上傳 / 儲存:抽象 `IFileStorage`,內建本機磁碟與 **Azure Blob** 兩種後端(`UseLocalFileStroage` / `UseAzureBlobStorage`)。
+- 檔案上傳 / 儲存:抽象 `IFileStorage`,內建本機磁碟與 **Azure Blob** 兩種後端(`UseLocalFileStroage` / `UseAzureBlobStorage`),含確認 / 孤兒清理生命週期(見 [core/file-upload.md](core/file-upload.md))。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
 - 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、快取過期時只讓單一請求重建以免一窩蜂打後端(cache stampede,`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
@@ -161,7 +162,7 @@ options.ConfigPostApi(x =>
 |---|---|---|
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | — |
-| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
 
