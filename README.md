@@ -1,247 +1,271 @@
 # HCS Platform
 
-### 從 ERP 系統反推出的「全端可組裝平台 SDK」
+ERP 開發平台:ASP.NET Core(.NET)+ Angular 17 + OData + EF Core。後端以 fluent / 宣告式設定組裝——描述業務模型與規則,平台在執行期產生 Controller、查詢端點、權限與多租戶過濾,不需手寫 Controller / Repository / 權限中介層。
 
-> **後端不寫 Controller，前端不寫 CRUD 頁。**
-> 你描述業務模型，平台長出整條 stack — Controller、Repository、權限檢查、稽核軌跡、簽核流程、OData 查詢端點、Angular 列表與表單頁，全部自動到位。
-
----
-
-## 為什麼存在
-
-寫過十個內部系統的人都知道：
-**每個系統的 80% 都長一樣。**
-
-登入、組織、權限、CRUD、清單頁、表單頁、字典表、稽核、簽核、檔案上傳、Excel 匯出、報表、推播、多語系、JWT、2FA…
-
-業務需求只在最後那 20%。
-
-可是工程師每次都從 `dotnet new` 開始重蓋一次那 80%。
-
-**HCS Platform 把那 80% 變成宣告式設定。**
-
-你只負責那 20%。
+> 本文件庫皆為**參考資料**,可能與現狀有出入。**與 code 衝突時,一律以 code 為準。**
 
 ---
 
-## 三段寫完
+## 目錄
+
+- [這是什麼](#這是什麼)
+- [平台能力](#平台能力)
+- [模組開發](#模組開發)
+- [前端](#前端)
+- [專案地圖](#專案地圖)
+- [開發者快速上手](#開發者快速上手)
+
+---
+
+## 這是什麼
+
+HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本身。它把下列能力綁在一個 host,讓模組只需描述業務模型:
+
+- 自動產生 RESTful CRUD + OData 查詢端點
+- JWT 驗證 + 即時 role claim 注入 + 細粒度權限
+- 多租戶(Organization)資料隔離 + 子組織授權
+- Pipe 擴充模型(DI 自動注入)
+- Angular 17 SPA host 整合 + 自有 component library
+
+簽核流程、系統稽核、字典/代碼表、App 版本、2FA、第三方登入、多通道發訊等為**可選模組**(見[專案地圖](#專案地圖))。
+
+---
+
+## 平台能力
+
+以下是平台**核心**(`Hcs.Platform.Core`)一律提供的能力;功能性的東西(簽核、稽核、2FA…)是可選模組,不在此列。
+
+### 1. 模組:一個 `IPlatformModule` 宣告整組功能
+
+每個業務模組實作 `IPlatformModule.Build(IPlatformModuleBuilder)`,一段 fluent 設定同時宣告:
+
+- Entity → DB 對應(`AddModel<>`)
+- 五支 RESTful API:`AddEntityApi<TKey, TEntity>` 自動產生 Get / Query / Post / Put / Delete(**不寫 Controller**,控制器在執行期動態產生)
+- 自訂端點:`AddQueryFlowApi<T>` / `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi`(不綁 entity 也能產出端點)
+- 子集合處理:`SaveChildsFor(s => s.Items)` / `QueryChildFor(c => c.Items)`
+- 細粒度權限樹:`AddModuleFuncion` + `AddStandardApiRoles` + `AddPermission`
+- 公開端點:`moduleBuilder.Everyone.AddRole(api)`(不需登入)
+- 檔案欄位:`SetupFilePipes(x => x.Photo)`
+- 模組私有服務:`moduleBuilder.Services.AddScoped<MyService>()`
+
+### 2. Pipe 擴充點(參數自動 DI)
+
+所有切入點(`OnCreated` / `OnUpdated` / `OnDeleted` / `OnValidate` / `OnQueryed` / `OnGeted` / `OnKeyGeted`)都接受 `Pipe(...)`,**Pipe lambda 的參數會自動從 DI 注入**:
 
 ```csharp
-// 後端：描述業務 model + 想要的 API + 權限
-public class Module : IPlatformModule
-{
-    public void Build(IPlatformModuleBuilder b)
-    {
-        b.AddModel<MyModelConfig>();
-        var api = b.AddEntityApi<long, Invoice>(opt =>
+options.ConfigPostApi(x =>
+    x.OnCreated(y => y.Pipe(
+        ((ScopeDbContextState state, IHttpContextAccessor http) services, Customer x) =>
         {
-            opt.AllowChildOrganizationData("Invoice.ChildOrg");
-            opt.SetupFilePipes(x => x.Attachment);
-            opt.EnableDefaultSystemLogging("MyApp.Invoice", m =>
-                m.SetPrefix("models.MyApp.").CensorProperty(x => x.SecretField));
-            opt.ConfigApprovalFlow(...);
-        });
-        b.AddModuleFuncion("MyApp.Invoice", o => o.AddStandardApiRoles(api));
-    }
-}
+            // services.state / services.http 由框架注入
+        })));
 ```
 
-```csharp
-// 註冊一行
-services.AddHcsPlatform(b => b.AddModule<MyFeature.Module>());
-```
+支援純 model / async / 加 `DbContext` / 加任意 tuple 服務 / 加 i18n `ITranslate` 等多載,也支援條件分支 `SwitchCase`。核心 `DIPipe<TIn,TOut>` 與用法見 [core/pipe.md](core/pipe.md)。
 
-```typescript
-// 前端
-constructor(f: DataSourceFactory) { this.data = f.getDataSource(Invoice); }
-// <hcs-data-grid [dataSource]="data"></hcs-data-grid>
-```
+### 3. 多租戶與上下級組織授權
 
-**得到什麼**：5 支 RESTful API (Get/Query/Post/Put/Delete) + OData 查詢 (`$filter / $select / $expand`) + 多租戶資料隔離 + 子組織授權 + 檔案上傳 + 完整稽核軌跡 + 三層權限樹（View / Modify / Delete）+ 簽核流程整合 + Angular 列表頁 + Angular 表單頁 + 權限選單。
+資料隔離透過 `IDataFilterPipe` 管道機制(非 EF Core `HasQueryFilter`):
 
-**寫了多少 code**：一個 class，約 15 行。
+- 內建按 `OrgId` 自動過濾。
+- `AllowChildOrganizationData(roleName)` — 一行宣告「擁有此 role 的使用者可看子組織資料」。
+
+(`Organization` / `PlatformUser` / `PlatformGroup` 三層 entity 由 `Hcs.PlatformModule.Basic` 提供。)
+
+### 4. OData 查詢
+
+啟動時掃描 query entity 自動建 `EdmModel`。每個 entity 支援 `$filter / $select / $orderby / $expand`,但 expand 必須透過 `AddOdataPermission<T>(b => b.AllowExpand(...))` 白名單(預設拒絕,防關聯資料外洩)。
+
+### 5. 驗證與授權
+
+- **角色即時注入**:token 驗證時把使用者 role code 注入 claim——改權限不必重發 token。
+- **強制失效**:比對 token `notBefore` 與 `UserDataChangeTime`,可單方面標記舊 token 過期。
+- **後端驗證錯誤**:`OnValidate` 收集錯誤 → 400 → 前端 `hcs-error-summary` 顯示(見 [core/validation-errors.md](core/validation-errors.md))。
+
+### 6. ASP.NET + Angular SPA 一體
+
+`UseHcsPlatform` 自動把所有非 `/api/*` 的請求 fallback 到 Angular SPA,靜態檔從 `wwwroot/<spaPath>/`,並支援同站多 SPA 部署。
+
+### 7. 其他基礎建設
+
+- 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
+- HMAC-SHA512 簽章保護的 `/api/cache` 端點。
+- `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
+- 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、防快取驚群(`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
 ---
 
-## 核心特點
-
-### 1. Declarative Composition — 描述，而非實作
-
-平台所有功能都用 fluent builder 描述：
-
-```csharp
-options.ConfigPostApi(x => x
-    .OnValidate(v => v.Unique(u => u.AddProperty(p => p.Code).AddProperty(p => p.OrgId)))
-    .OnCreated(c => c.SaveChildsFor(s => s.Items))
-);
-```
-
-**沒有 Controller、沒有 ViewModel、沒有 mapper、沒有 repository、沒有 unit of work。**
-
-### 2. Pipe-based DI Extension Model — 不繼承、不改框架
-
-所有切入點接受 `Pipe(...)`，**lambda 參數會自動 DI**：
-
-```csharp
-opt.ConfigPostApi(x => x.OnCreated(y => y.Pipe(
-    ((DbContext db, IHttpContextAccessor http, ITranslate t) svc, Invoice inv) =>
-    {
-        // svc.db, svc.http, svc.t 全部自動注入
-        // 想加新的服務？多寫一個就好，不必改 interface
-    })));
-```
-
-支援同步 / 非同步 / DbContext / ScopedDbContext / 任意 tuple 服務 / i18n。
-還有 **條件分支** (`SwitchCase` / `AddCase`)、**子集合處理** (`SaveChildsFor` / `QueryChildFor`)、**角色條件** (`PipeIfRole`)。
-
-> **這是整個平台最不一樣的地方。** 一般 ORM / framework 擴充靠繼承或實作 interface — 改要動原始碼。Pipe 直接內聯，永遠回不到「為了加一個 hook 要建一個 class」的世界。
-
-### 3. 多租戶 (Multi-tenant) 是內建，不是 add-on
-
-`Organization` / `PlatformUser` / `PlatformGroup` 是平台一級公民：
-
-```csharp
-opt.AllowChildOrganizationData("Invoice.ChildOrg");   // 一行授權「能看子組織資料」
-```
-
-底層是 `IDataFilterPipe` 管道機制（不是 EF Core `HasQueryFilter`），可以針對 entity / role / 自訂條件動態組合過濾。
-
-### 4. 權限既然要做就做到最細
-
-每個 API 端點自動掛上角色 — `AddStandardApiRoles` 一行同時宣告 View / Modify / Delete 三層權限：
-
-```csharp
-b.AddModuleFuncion("MyApp.Invoice", opt => opt
-    .AddStandardApiRoles(api, c => c.View.AddOdataPermission<Invoice>(b => b
-        .AllowExpand(x => x.Customer.Name)      // OData $expand 走白名單
-        .AllowExpand(x => x.Items, x => x.AllowExpand(z => z.Product))
-    ))
-    .AddPermission("Approve", b => b.AddRole(approveApi))
-    .AddPermission("Export"));
-```
-
-**預設拒絕**：OData `$expand` 不在白名單一律打回，避免關聯資料外洩。
-**即時失效**：JWT `OnTokenValidated` 動態注入 role claim — 改權限不必重發 token；`UserDataChangeTime` 機制可強制舊 token 過期。
-
-### 5. 簽核流程是動態註冊，不是寫死
-
-```csharp
-opt.AddFlowCode<Invoice>("InvoiceFlow", flow =>
-{
-    flow.AddValueProvider("總金額", x => x.Pipe(inv => inv.Total));
-    flow.AddValueProvider("是否高風險", x => x.Pipe(inv => inv.Total > 1000000));
-    flow.AddUserProvider("主管", x => x.Pipe((DbContext db, Invoice inv) => GetMgr(db, inv)));
-    flow.AddEventHandler("發送通知信", x => x.Pipe(SendNotificationMail));
-});
-```
-
-流程由管理員透過 **前端的階段式編輯器** 設計 — 每個階段（stage）有展開面板可配置「入場事件 / 更新事件 / 離場事件」、可執行的「行動」清單、以及「下一階段的條件路由」；事件與條件透過條件編輯對話框組合判斷式；另有圖形視覺化頁（用 `@swimlane/ngx-graph` 渲染為有向圖）讓管理員檢查流程結構。配置存進 DB 動態執行。程式碼只負責註冊「平台不會自己知道」的部分 — 業務條件值怎麼算、簽核人怎麼解析、流程事件要做什麼。
-
-### 6. 稽核軌跡是 chainable
-
-```csharp
-opt.EnableDefaultSystemLogging("MyApp.Invoice", log => log
-    .SetPrefix("models.MyApp.")
-    .CensorProperty(x => x.SecretField)                          // 不記敏感欄
-    .IgnoreProperty(x => x.SystemFlag)                           // 不記系統欄
-    .LoadRefData(x => new { x.CreatedByUser.Name })              // 帶入關聯資料
-    .Map(x => x.CustomerId).ToValue(y => y.Customer.Name)        // ID → 可讀名稱
-    .SetDataIdentityGetter(x => $"{x.Code}({x.Id})"));
-```
-
-操作者、時間、新舊值 diff、可讀格式 — 全自動，**而且能對使用者用語言檔翻譯**。
-
-### 7. 前後端 SDK 同步演進
-
-平台前端是 **9 個 Angular library projects**，每個對應一個後端模組：
+## 模組開發
 
 ```
-core              ← 骨幹：OData / Form / Grid / 權限 / i18n / 登入
-basic             ← 對應後端 Basic 模組 (User/Group/Org)
-code-table        ← 對應 CodeTable 模組
-approval-flow     ← 對應 ApprovalFlow 模組
-system-logging    ← 對應 SystemLogging 模組
-app-update        ← 對應 AppUpdate 模組
-third-party-login
-two-factor-authentication
-two-factor-authentication-google
+┌────────────────────────────────────────────────────────────────┐
+│  你的模組（IPlatformModule.Build）                              │
+│                                                                 │
+│  AddModel<Customer> ─────────────► EF Core entity 註冊          │
+│                                                                 │
+│  AddEntityApi<long, Customer>                                  │
+│    ├── ConfigPostApi(.OnValidate.OnCreated)  ─┐                │
+│    ├── ConfigPutApi (.OnValidate.OnUpdated)   │                │
+│    ├── ConfigDeleteApi(.OnDeleted)            ├─► GenericController
+│    ├── ConfigGetApi  (.OnGeted)               │   執行期產生
+│    └── ConfigQueryApi(.OnQueryed)           ─┘                │
+│            ▲                                                    │
+│            └── Pipe(lambda) ◄── DI 自動注入任意服務            │
+│                                                                 │
+│  ConfigDataPipe<Customer>(.AddFilter)  ───► 全域 query filter   │
+│  SetupFilePipes(x => x.Photo)           ──► 檔案欄位            │
+│  AllowChildOrganizationData(roleName)   ──► 多租戶授權          │
+│                                                                 │
+│  AddModuleFuncion("Module.Customer")                           │
+│    ├── AddStandardApiRoles(api, ...)    ──► View/Modify/Delete │
+│    │       └── .AddOdataPermission<T>(.AllowExpand(...))       │
+│    └── AddPermission("CustomPerm")                             │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-**權限字串、Function code、entity TypeScript 模型** — 前後端用同一條 `"Module.Entity.Action"` 字串對得起來。
+設計原則:
 
-> 後端 `AddModuleFuncion("Basic.PlatformUser")` ⟷ 前端 `HCS_FUNCTION_NAME: "Basic.PlatformUser"` ⟷ 角色字串 `"Basic.PlatformUser.View"`
+1. 不寫 Controller——用 `AddEntityApi` / `AddXxxFlowApi`。
+2. 不繼承擴充行為——用 `Pipe(...)` 插管子,參數會自動 DI。
+3. 不寫權限檢查——用 `AddModuleFuncion` 宣告權限,OData expand 走白名單。
 
-### 8. 不 fork SDK 也能客製
-
-前端每個 library 開放 `createRoute(overrides)`：
-
-```typescript
-HcsBasicProviderModule.createRoute({
-    platformUserForm: () =>
-        import('./my-custom-user-form.component').then(x => x.MyCustomUserFormComponent)
-})
-```
-
-換掉預設組件，路由結構、權限、i18n key 完全保留。**SDK 升級時你的客製不會被覆蓋。**
-
-### 9. 一份 codebase，Web + iOS + Android
-
-Capacitor 5 + Ionic 7 整合：
-
-```typescript
-constructor(p: HcsPlatform) {
-    if (p.isWeb) { /* desktop UI */ }
-    if (p.isAndroid || p.isIOS) { /* native UI */ }
-    if (p.isTablet) { /* tablet UI */ }
-}
-```
-
-掃條碼、列印、分享、推播 — Capacitor plugin 全套位。
+範例見示範模組 `Hcs.PlatformModule.Test`。
 
 ---
 
-## 還有什麼
+## 前端
 
-| 領域 | 內建能力 |
-|---|---|
-| **登入** | JWT、Google OAuth、Facebook OAuth、IP 白名單、Proxy login（管理員代登入） |
-| **2FA** | Google Authenticator（TOTP），可擴充其他 provider |
-| **儲存** | 本機檔案、Azure Blob、SMB／網路芳鄰 |
-| **發訊** | Email（SMTP / MailKit）、Firebase Cloud Messaging（Android）、APNs（iOS）、三竹簡訊（台灣 SMS） |
-| **匯出** | Excel（ClosedXML 樣板引擎，cell-level value transform） |
-| **快取** | Distributed memory cache、HMAC 簽章保護的快取端點、防驚群的 `GetOrCreateAtomicAsync` |
-| **鎖** | 分散式原子鎖（SQL Server / MySQL / Redis 三種實作） |
-| **資料表** | 字典/代碼表機制（含多語系），刪除前自動檢查引用關係 |
-| **背景任務** | `IHostedService` 不擋，標準 ASP.NET Core 模式 |
-| **加密** | AES / MD5 / SHA、API payload 加密 middleware |
-| **時鐘** | `X-HCS-Server-Ts` response header 統一伺服器時鐘給前端校時 |
+**前端不會由宣告自動生成**——這點與後端不同。平台提供框架、可重用元件(`hcs-data-grid`、`hcs-list-page`、`hcs-form-page`、各式 `hcs-*-input`、`hcs-pager`…)、基底類別(`BaseListComponent` / `BaseFormComponent`)與資料來源(`DataSourceFactory` / `OdataDataSource`);使用端按功能組裝。
+
+每個 CRUD 功能,使用端寫一組精簡的 **list + form** 元件:
+
+- **list**:`extends BaseListComponent<T>`,provide 功能名稱 / route,`super(service, T)`,用 reactive form 定義查詢欄位;template 以 `<hcs-data-grid>` + `*hcsDataGridColum` 指令排版欄位、`hcs-*-input` 排查詢條件。
+- **form**:`extends BaseFormComponent<T>`,`super(service, T)`,用 reactive form(含 `Validators`)定義編輯欄位;template 排表單。
+- **route**:在 Angular `Route[]` 註冊 list / `new` / `:id` / `:id/edit` 對應元件。
+
+**資料抓取、分頁、查詢條件轉 OData、存檔、驗證錯誤顯示**由基底類別與 `DataSourceFactory.getDataSource(Entity)` 處理——**使用端不需自己寫 API 呼叫**,只要把 datasource 指向 entity model(對應後端 `/api/odata/<Entity>`)。
+
+完整前端 SDK 說明(library 清單、7 個 SDK 慣例、`@hcs/core` 內容、新增功能步驟)見 [frontend.md](frontend.md)。
 
 ---
 
-## Track record
+## 專案地圖
 
-- **生產系統**：內部與客戶系統長期運行於此平台
-- **API 穩定性**：經歷 Angular 11 → 17 大跳，**SDK 對外 API 幾乎不變**。舊系統升級主要是框架版本升級，業務程式碼不重寫
-- **可組裝性**：每個內建模組（Basic / CodeTable / ApprovalFlow…）可獨立啟用，**不用就不付出代價**
-- **權限的成熟度**：上線系統實際運行三層權限樹 + OData expand 白名單 + 子組織授權 + group-role 二維過濾，沒踩過權限漏洞
+`Doc` 欄連到有 doc 涵蓋的 project(來源是各 doc 的維護端清單);`—` 代表尚無對應 doc。`Hcs.Platform.Core` 與前端 `core` 是 kitchen-sink 專案,只被 Core 基礎層各篇切片涵蓋一部分。
+
+> 目前已寫的深入文件僅 2FA、Pipe、驗證錯誤、i18n 等少數幾篇,**陸續補齊中、不代表平台功能範圍**——平台完整能力見[平台能力](#平台能力)。
+
+### 核心
+
+| 專案 | 角色 | Doc |
+|---|---|---|
+| `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
+| `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | — |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [pipe](core/pipe.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.Data` | 資料層共用契約(`IScopedDbContext`、查詢 context 等) | — |
+| `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
+| `Hcs.Platform.Webapi` | 平台自帶的示範 host | — |
+| `Hcs.Platform.Core.Tests` / `Hcs.Platform.Flow.Tests` | 測試 | — |
+
+### Platform Modules(可選,各對應一個 `AddXxxModule()`)
+
+| 模組 | 用途 | Doc |
+|---|---|---|
+| `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | — |
+| `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
+| `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
+| `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
+| `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | — |
+| `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](features/2fa.md) |
+| `Hcs.PlatformModule.Test` / `.Test.Model` | 示範模組——新人請從這裡讀 | — |
+
+### Models 專案(獨立出來讓前端 / 第三方可 reference entity 定義而不依賴 server logic)
+
+| 專案 | 用途 | Doc |
+|---|---|---|
+| `Hcs.Platform.ApprovalFlow.Models` | 簽核流程 entity | — |
+| `Hcs.Platform.AppUpdate.Models` | App 版本 entity | — |
+| `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | — |
+| `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | — |
+| `Hcs.Platform.TwoFactorAuthentication.Models` | 2FA entity | [2fa](features/2fa.md) |
+
+### 基礎建設
+
+| 專案 | 用途 | Doc |
+|---|---|---|
+| `Hcs.AtomLock.Generic` | 分散式原子鎖(SQL Server / MySQL / Redis) | — |
+| `Hcs.Encryption` | AES / MD5 / SHA 等加密/雜湊 | — |
+| `Hcs.Expressions` | Expression Tree 與屬性訪問器工具 | — |
+| `Hcs.Pipe` | Pipe 責任鏈核心——`DIPipe<TIn,TOut>`,整個平台擴充模型的基石 | [pipe](core/pipe.md) |
+| `Hcs.Pipe.Tests` | Pipe 行為規格 / 用法範例 | [pipe](core/pipe.md) |
+| `Hcs.Pipes.Ckeditor` | CKEditor 上傳檔案的確認與孤兒檔案清理 pipe | — |
+| `Hcs.Console` | .NET Console host 框架(DI + NLog + 命令列) | — |
+| `Hcs.Serialize.Xlsx` | 以 ClosedXML 為底的 Excel 動態序列化 | — |
+| `Hcs.Storage` / `.Local` / `.Smb` | 檔案儲存抽象 + 本機 / SMB 實作 | — |
+| `Hcs.ThirdPartyLogin` / `.Abstraction` | 第三方登入框架 + 綁定管理 | — |
+| `Hcs.ThirdPartyLogin.Google` / `.Facebook` | OAuth 實作 | — |
+| `Hcs.2FA.GoogleAuthenticator` | Google Authenticator (TOTP) | [2fa](features/2fa.md) |
+| `Hcs.Platform.IpWhiteListOnlyLogin` | 限制特定 IP 才能登入 | — |
+
+### Extensions 套件
+
+| 專案 | 用途 | Doc |
+|---|---|---|
+| `Hcs.Extensions.ApprovalFlow` | 簽核流程領域實作(搭配 `Hcs.Platform.Flow`) | — |
+| `Hcs.Extensions.Collections` | 字典擴充(`AddIfNotExists` / `AddOrUpdate`) | — |
+| `Hcs.Extensions.DependencyInjection` | 命名服務工廠(按名稱解析多實作) | — |
+| `Hcs.Extensions.EntityFrameworkCore` | DbSet / Queryable 擴充(主鍵篩選等) | — |
+| `Hcs.Extensions.MemoryCache` | `GetOrCreateAtomicAsync` 防快取驚群 | — |
+| `Hcs.Extensions.Message` / `.Email` / `.Android` / `.Ios` / `.Mitake` | 多通道發訊抽象 + SMTP / FCM / APNs / 三竹簡訊實作 | — |
+| `Hcs.Extensions.OdataClient` | OData 查詢 client(LINQ → OData URL) | — |
+| `Hcs.Extensions.RequestData` | HTTP request 資料字典 | — |
+| `Hcs.Extensions.SystemLogging` | 系統日誌服務(追蹤資料變更 / 商業行為) | — |
+| `Hcs.Extensions.Type` / `.Type.Tests` | 反射工具(友善泛型類型名稱)+ 測試 | — |
+| `Hcs.Extensions.Validation` | 實體驗證結果擴充(`AddErrorFor`) | [validation](core/validation-errors.md) |
+| `Hcs.Extensions.Xlsx` | Excel 序列化格式化擴充(日期/數值),搭配 `Hcs.Serialize.Xlsx` | — |
+
+### 前端(`Hcs.Platform.Frontend/projects/`)
+
+Angular 17 SPA + ng library projects。
+
+| 專案 | 角色 | Doc |
+|---|---|---|
+| `core` | 平台核心 lib(`HcsComponentsModule`、`DataGridComponent`、`OdataDataSource`、`ErrorHelper`、i18n loader…) | [validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | — |
+| `app-update` | App 版本管理 UI | — |
+| `approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
+| `code-table` | 字典/代碼表 UI | — |
+| `system-logging` | 稽核軌跡 UI | — |
+| `third-party-login` | 第三方登入 UI | — |
+| `two-factor-authentication` | 2FA UI | [2fa](features/2fa.md) |
+| `two-factor-authentication-google` | Google Authenticator UI | [2fa](features/2fa.md) |
+| `create-hcs-app` | 專案產生器 schematics | — |
+| `Hcs` | host / demo app | — |
+
+> 另有 submodule `external/OdataQueryLite`(新版 OData 查詢引擎,獨立 repo),不在本表。
 
 ---
 
-## 你不會得到什麼
+## 開發者快速上手
 
-誠實一點：
+### 加一個業務功能(後端)
 
-- **不是一個跨組織開源生態**。文件量、社群規模、第三方擴充庫沒辦法跟 ABP Framework / OpenIddict 比。
-- **強制平台契約**。entity 要有 `Id` 與 `OrgId`、權限要走 Function code、前端 component 要宣告 `HCS_FUNCTION_NAME`。不接受這套契約，所有自動化都失效。
-- **不是 microservice 框架**。單體 + 模組化的設計，多服務拆分需要自己處理 transaction boundary。
+1. 建模組專案 `Hcs.PlatformModule.<YourFeature>`,加一個 class 實作 `IPlatformModule`。
+2. `Build` 裡描述業務:
 
----
+   ```csharp
+   public void Build(IPlatformModuleBuilder b)
+   {
+       b.AddModel<MyFeature.ModelConfig>();
+       var api = b.AddEntityApi<long, Invoice>(opt =>
+       {
+           opt.AllowChildOrganizationData("MyFeature.Invoice.ChildOrgData");
+           opt.ConfigPostApi(x => x.OnValidate(v => v.Unique(u =>
+               u.AddProperty(p => p.No).AddProperty(p => p.OrgId))));
+       });
+       b.AddModuleFuncion("MyFeature", "Invoice",
+           o => o.AddStandardApiRoles(api));
+   }
+   ```
 
-## 設計理念
-
-> **業務邏輯該短，框架程式碼該長。**
-> 大多數系統剛好相反 — 業務藏在三層抽象底下，每加一個欄位要動五個檔案。
->
-> 這份 SDK 把選擇反過來：複雜度集中在平台核心一次解決，每個業務模組是一張可讀的清單 — entity、API、權限、簽核、稽核，**像在寫需求文件一樣寫程式**。
-
----
+3. 註冊到 host:在 `AddHcsPlatform(...)` 裡加 `builder.AddModule<MyFeature.ModuleConfig>();`。
