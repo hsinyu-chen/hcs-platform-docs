@@ -22,6 +22,54 @@ var api = b.AddEntityApi<long, Customer>(opt =>
 
 ---
 
+## 定義與註冊 Model(`AddEntityApi` 的前置)
+
+`AddEntityApi` 長端點,但 entity 對 DB 的對應是**另一個獨立步驟** `AddModel`——兩件事分開:有 model 不一定要開 API,開 API 前一定要先有 model。
+
+### `AddModel<TModelConfig>()` / `IModelConfig`
+
+```csharp
+b.AddModel<MyFeature.ModelConfig>();   // 註冊這個模組那一片 EF 對應 + 種子
+```
+
+`IModelConfig` 兩個方法,就是「模組自己那一片 `OnModelCreating`」:
+
+- `BuildModel(ModelBuilder)`:fluent 設定(索引、`HasMaxLength`、關聯、刪除行為…)。
+- `BuildSeedData(DbContext)`:種子資料(沒有就留空)。
+
+`AddModel` **依 `TModelConfig` 型別去重**——同一個 config 註冊多次只跑一次。
+
+### base 型別:`Id` + audit + 租戶欄位都不用手寫
+
+不必每個 entity 從零寫 `Id` 和六個 audit 欄位,繼承 base 型別:
+
+| 繼承 | 你拿到 |
+|---|---|
+| `BaseModel<TKey>`(或 `BaseModel` = `long`) | `Id` + audit 六欄(`CreatedBy`/`CreatedByUser`/`LastUpdatedBy`/`LastUpdatedByUser`/`CreatedTime`/`LastUpdatedTime`),**已實作 `IPlatformEntity`** |
+| `BaseOrganizedModel<TKey>`(或 `BaseOrganizedModel`) | 上面全部 + `OrgId` + `Organization` 導覽屬性 |
+
+對應的外鍵在 `BuildModel` 裡用一行 helper 接好,不必手寫 `HasOne(...).WithMany()`:
+
+```csharp
+modelBuilder.Entity<Invoice>(e => e.SetupBaseModel());           // 接 audit user FK(ClientSetNull)
+modelBuilder.Entity<Order>(e => e.SetupBaseOrganizedModel());    // 再接 Organization FK(Restrict)
+```
+
+### ⚠️ 繼承 `BaseOrganizedModel` 不會自動吃租戶過濾
+
+audit 與租戶兩條內建切面是**按介面註冊**的(`ConfigDataPipe<IPlatformEntity>` / `ConfigDataPipe<IOrganized>`),所以「有沒有套」看 entity **nominally 實作了哪個介面**,不看它有沒有那些欄位:
+
+- `BaseModel` **本身就 `: IPlatformEntity`** → 一繼承,audit 自動蓋 / 鎖就生效(見 [data-pipes](data-pipes.md))。
+- `BaseOrganizedModel` **只給你 `OrgId` 屬性、並沒有 `: IOrganized`** → 要租戶過濾 / 自動蓋 `OrgId`,entity 得**自己再掛 `, IOrganized`**:
+
+```csharp
+public class Order : BaseOrganizedModel, IOrganized { ... }   // ← IOrganized 不能省
+```
+
+少了那個 `IOrganized`,`Order` 照樣編譯、照樣有 `OrgId` 欄位,但**租戶過濾與自動蓋 `OrgId` 全都不會發生**(`OrganizedPipe` / `OrganizedDataFilter` 都是 `where T : IOrganized`)。最容易踩的一條:**有 `OrgId` 欄位 ≠ 受租戶隔離**。租戶讀寫語意見 [multi-tenant](multi-tenant.md)。
+
+---
+
 ## 每支端點的管線
 
 每支端點 = 一串內建步驟,中間插入你的 hook(各 hook 收一個 [DIPipeBuilder](pipe.md),可疊多段)。`[ ]` 標的是 hook、其餘是內建步驟。
