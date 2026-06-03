@@ -225,23 +225,22 @@ options.ConfigPostApi(x =>
 | `Hcs.Extensions.Validation` | 實體驗證結果擴充(`AddErrorFor`) | [validation](core/validation-errors.md) |
 | `Hcs.Extensions.Xlsx` | Excel 序列化格式化擴充(日期/數值),搭配 `Hcs.Serialize.Xlsx` | — |
 
-### 前端(`Hcs.Platform.Frontend/projects/`)
+### 前端(npm `@hcs/*` 套件)
 
-Angular 17 SPA + ng library projects。
+Angular 17 SPA + ng library 套件。
 
-| 專案 | 角色 | Doc |
+| 套件 | 角色 | Doc |
 |---|---|---|
-| `core` | 平台核心 lib(`HcsComponentsModule`、`DataGridComponent`、`OdataDataSource`、`ErrorHelper`、i18n loader…) | [validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
-| `basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | — |
-| `app-update` | App 版本管理 UI | — |
-| `approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
-| `code-table` | 字典/代碼表 UI | — |
-| `system-logging` | 稽核軌跡 UI | — |
-| `third-party-login` | 第三方登入 UI | — |
-| `two-factor-authentication` | 2FA UI | [2fa](features/2fa.md) |
-| `two-factor-authentication-google` | Google Authenticator UI | [2fa](features/2fa.md) |
-| `create-hcs-app` | 專案產生器 schematics | — |
-| `Hcs` | host / demo app | — |
+| `@hcs/core` | 平台核心 lib(`HcsComponentsModule`、`DataGridComponent`、`OdataDataSource`、`ErrorHelper`、i18n loader…) | [validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `@hcs/basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | — |
+| `@hcs/app-update` | App 版本管理 UI | — |
+| `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
+| `@hcs/code-table` | 字典/代碼表 UI | — |
+| `@hcs/system-logging` | 稽核軌跡 UI | — |
+| `@hcs/third-party-login` | 第三方登入 UI | — |
+| `@hcs/two-factor-authentication` | 2FA UI | [2fa](features/2fa.md) |
+| `@hcs/two-factor-authentication-google` | Google Authenticator UI | [2fa](features/2fa.md) |
+| `create-hcs-app` | 專案產生器 schematics(`npm create hcs-app`) | — |
 
 > 另有 submodule `external/OdataQueryLite`(新版 OData 查詢引擎,獨立 repo),不在本表。
 
