@@ -6,34 +6,6 @@
 
 ---
 
-## 整體架構
-
-```
-Hcs.Platform.Frontend/
-├── projects/                       ← SDK(build 成 npm 套件)
-│   ├── core/                       ← 基石:hcs-lib + hcs-components + hcs-platform + models
-│   ├── basic/                      ← User / Group / Organization 頁面
-│   ├── code-table/                 ← 字典表頁面
-│   ├── approval-flow/              ← 簽核流程設計頁面
-│   ├── system-logging/             ← 稽核記錄檢視
-│   ├── app-update/                 ← App 版本管理
-│   ├── third-party-login/          ← 第三方登入頁
-│   ├── two-factor-authentication/  ← 2FA 設定主框架
-│   ├── two-factor-authentication-google/  ← Google Authenticator provider
-│   └── create-hcs-app/             ← schematics(新專案鷹架)
-│
-├── src/app/                        ← 示範 host app(用 SDK 拼一個完整網站)
-│   ├── app.module.ts               ← 註冊所有 HcsXxxProviderModule.forRoot()
-│   ├── app.route.ts                ← 用 defaultRoute / createRoute 組路由
-│   └── hcs-test/                   ← 對接後端 Hcs.PlatformModule.Test 的示範頁
-```
-
-- **SDK 端**:每個 `projects/<x>/` 是獨立 ng-package,build 完輸出對應 npm 名稱(`@hcs/core`、`@hcs/basic`…)。
-- **Host 端**:`src/app/` 是 application,透過 tsconfig path mapping 直接吃 SDK source(不必先 build),把模組組裝起來。
-- **Build 輸出**:production build 把 host app 輸出到後端 `wwwroot/`,由 SPA fallback serve。
-
----
-
 ## Library projects
 
 | Library | npm 套件 | 對應後端模組 | 提供內容 |
