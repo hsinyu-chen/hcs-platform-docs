@@ -92,7 +92,8 @@ builder
 把 step 抽成 `static readonly Func<TServices, TIn, Task>`(副作用版)或 `...Task<TNext>>`(轉換版),多處 / 多 API 共用同一份邏輯。例如代碼表的 `ValidatePost`/`ValidatePut`/`ValidateDelete` 三個 step 共用一個私有 `Validate`:
 
 ```csharp
-public static readonly Func<(IPrincipal user, DbContext db, IUserOrganization org),
+public static readonly Func<(IPrincipal user, DbContext db,
+        IEnumerable<CodeTableConfigService> configs, IUserOrganization org),
     EntityValidationResult<CodeTable>, Task>
     ValidatePost = async (services, vr) => await Validate(Action.Create, services, vr);
 
