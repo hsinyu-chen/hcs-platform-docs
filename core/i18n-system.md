@@ -35,7 +35,7 @@
 
 - **先載入主檔**,主檔回應後再 `combineLatest` **並行**載入各 `I18N_INDEX` 模組字典(模組彼此並行、但主檔 vs 模組是串行),最後以 `pathObject()` 遞迴合併進主字典。
 - **`I18N_INDEX`**(`InjectionToken`,multi):各模組在 `forRoot()` 用 `{ provide: I18N_INDEX, useValue: '...', multi: true }` 註冊自己的字典目錄。現有:`basic`、`system-logging`、`app-update`、`code-table`、`approval-flow`、`third-party-login`、`two-factor-authentication`、`two-factor-authentication-google`。
-- **`fixObject()`**:含 `.` 的 key(如 `"PlatformModule.Test.CustomerType"`)自動展開成巢狀。
+- **`fixObject()`**:含 `.` 的 key(如 `"MyApp.Sales.CustomerType"`)自動展開成巢狀。
 
 ### 3. link 機制
 
@@ -43,7 +43,7 @@
 
 | 語法 | 用途 | 例 |
 |---|---|---|
-| `#{path}` | 整個值 ref 到另一路徑(**可指向子樹**) | `"#{models.Test}"`、`"#{../common.done}"` |
+| `#{path}` | 整個值 ref 到另一路徑(**可指向子樹**) | `"#{models.Sales}"`、`"#{../common.done}"` |
 | `@{path}` | 內插 ref,可與文字混用 | `"生@{../../../functions.X}日"` |
 
 - **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對當前 key 所在節點)。
@@ -80,7 +80,7 @@
 - **實作 `JsonFileTranslate`**:
   - 讀 `WebRootPath/assets/i18n` 下**所有** `{lang}.json`(含模組子目錄,`SearchOption.AllDirectories`),與前端**同一份字典**。
   - `WalkNode` 遞迴**扁平化**成 `Map<點路徑, 值>`;`static` 快取(依 lang + 檔案 mtime,改檔自動失效)。
-  - **載入時 eager 解析 link**(`ResolveLinks`):扁平化後一次解完 `#{}` / `@{}`,快取存的是**成品字串**(已無 link 語法)。子樹 ref(`#{models.Test}`)會把目標子樹的葉節點**展開**到來源 prefix 底下,所以 `models.PlatformModule.Test.Customer.Name` 等都查得到。`{{key}}` 佔位**刻意保留**,留到 `Get` 時用呼叫端參數替換。
+  - **載入時 eager 解析 link**(`ResolveLinks`):扁平化後一次解完 `#{}` / `@{}`,快取存的是**成品字串**(已無 link 語法)。子樹 ref(`#{models.Sales}`)會把目標子樹的葉節點**展開**到來源 prefix 底下,所以 `models.MyApp.Sales.Customer.Name` 等都查得到。`{{key}}` 佔位**刻意保留**,留到 `Get` 時用呼叫端參數替換。
   - 語言來自 `IClientInfo.GetClientLang()`(前端請求帶 header `X-HCS-Lang`);**header 缺少時固定 fallback `zh-tw`**,與前端 `HCS_DEFAULT_LANG` 無關。
   - `Get`:查 map,有 `parameters` 則逐個把 `{{key}}` 替換成值;**查無 key 回傳 key 原樣**。
 - **DI**:`services.AddScoped<ITranslate, JsonFileTranslate>()`。
@@ -94,5 +94,5 @@
 
 - **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對當前 key 所在節點);整值 `#{}` 可指向子樹,`@{}` 內插與文字混用。
 - **fallback**:整值 `#{}` 解不到 → 該 key 無 entry(`Get` 回 key);內插 `@{}` 段解不到 → 該段空字串;self-ref / 循環 → 偵測後當解不到(後端靜默,前端 `console.error/warn`)。內插 `@{}` 段若指到**子樹**(非單一值):後端視為解不到 → 空字串,前端 `nestedGet` 拿到物件 → stringify 成 `[object Object]`(實務上不會在內插指子樹,後端行為較合理)。
-- **子樹 ref 在後端的呈現**:扁平 map 沒有「指向子樹」的單一 entry,改以**展開**呈現——`#{models.Test}` 會把 `models.Test.*` 的葉節點複製到來源 prefix 底下。因此 ref 節點本身(`models.PlatformModule.Test`)在後端**不是 scalar、查無 entry**,但其下的葉(`...Test.Customer.Name`)都查得到,結果與前端一致。
+- **子樹 ref 在後端的呈現**:扁平 map 沒有「指向子樹」的單一 entry,改以**展開**呈現——`#{models.Sales}` 會把 `models.Sales.*` 的葉節點複製到來源 prefix 底下。因此 ref 節點本身(`models.MyApp.Sales`)在後端**不是 scalar、查無 entry**,但其下的葉(`...Sales.Customer.Name`)都查得到,結果與前端一致。
 - `{{}}` 內插兩邊都支援,但 params 來源不同:前端由 ngx-translate 呼叫端給、後端由 `ITranslate.Get` 的 `parameters` 字典給。link resolve(載入期)發生在 `{{}}` 替換(執行期)**之前**,兩者不衝突——`#{}` 指到含 `{{field}}` 的值時,佔位會被保留到 `Get` 才填。

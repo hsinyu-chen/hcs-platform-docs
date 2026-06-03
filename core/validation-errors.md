@@ -122,10 +122,10 @@ this.http.post(url, model).subscribe({
              (舊寫法 {{data.who}} 仍可用;欄位撞名 data 時用 {{data.data}})
   ```
 
-- ⚠️ **欄位名(field)的 i18n key 前綴** — summary 顯示的欄位名 key = `models.{functionName}.{Title}`,`functionName` 來自後端 `AddModuleFuncion`。**若 model 翻譯的前綴跟 functionName 不一致**(例:model 掛在 `models.Test.Customer`,但 functionName 是 `PlatformModule.Test.Customer`),欄位名就翻不出來。解法是用 i18n 的 link 機制(`#{}`)把前綴 alias 過去:
+- ⚠️ **欄位名(field)的 i18n key 前綴** — summary 顯示的欄位名 key = `models.{functionName}.{Title}`,`functionName` 來自後端 `AddModuleFuncion`。**若 model 翻譯的前綴跟 functionName 不一致**(例:model 掛在 `models.Sales.Customer`,但 functionName 是 `MyApp.Sales.Customer`),欄位名就翻不出來。解法是用 i18n 的 link 機制(`#{}`)把前綴 alias 過去:
 
   ```json
-  "models": { "PlatformModule": { "Test": "#{models.Test}" } }
+  "models": { "MyApp": { "Sales": "#{models.Sales}" } }
   ```
 
 > i18n 的 link 語法(`#{}` / `@{}`)、模組字典合併、相對/絕對路徑等通用機制,屬獨立主題,見 [i18n 系統](i18n-system.md)。

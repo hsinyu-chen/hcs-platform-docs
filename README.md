@@ -91,6 +91,7 @@ options.ConfigPostApi(x =>
 ### 7. 其他基礎建設
 
 - 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
+- 檔案上傳 / 儲存:抽象 `IFileStorage`,內建本機磁碟與 **Azure Blob** 兩種後端(`UseLocalFileStroage` / `UseAzureBlobStorage`)。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
 - 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、快取過期時只讓單一請求重建以免一窩蜂打後端(cache stampede,`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
@@ -130,8 +131,6 @@ options.ConfigPostApi(x =>
 2. 不繼承擴充行為——用 `Pipe(...)` 插管子,參數會自動 DI。
 3. 不寫權限檢查——用 `AddModuleFuncion` 宣告權限,OData expand 走白名單。
 
-範例見示範模組 `Hcs.PlatformModule.Test`。
-
 ---
 
 ## 前端
@@ -165,8 +164,6 @@ options.ConfigPostApi(x =>
 | `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
-| `Hcs.Platform.Webapi` | 平台自帶的示範 host | — |
-| `Hcs.Platform.Core.Tests` / `Hcs.Platform.Flow.Tests` | 測試 | — |
 
 ### Platform Modules(可選,各對應一個 `AddXxxModule()`)
 
@@ -178,7 +175,6 @@ options.ConfigPostApi(x =>
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
 | `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | — |
 | `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](features/2fa.md) |
-| `Hcs.PlatformModule.Test` / `.Test.Model` | 示範模組——新人請從這裡讀 | — |
 
 ### Models 專案(獨立出來讓前端 / 第三方可 reference entity 定義而不依賴 server logic)
 
@@ -198,11 +194,9 @@ options.ConfigPostApi(x =>
 | `Hcs.Encryption` | AES / MD5 / SHA 等加密/雜湊 | — |
 | `Hcs.Expressions` | Expression Tree 與屬性訪問器工具 | — |
 | `Hcs.Pipe` | Pipe 責任鏈核心——`DIPipe<TIn,TOut>`,整個平台擴充模型的基石 | [pipe](core/pipe.md) |
-| `Hcs.Pipe.Tests` | Pipe 行為規格 / 用法範例 | [pipe](core/pipe.md) |
 | `Hcs.Pipes.Ckeditor` | CKEditor 上傳檔案的確認與孤兒檔案清理 pipe | — |
 | `Hcs.Console` | .NET Console host 框架(DI + NLog + 命令列) | — |
 | `Hcs.Serialize.Xlsx` | 以 ClosedXML 為底的 Excel 動態序列化 | — |
-| `Hcs.Storage` / `.Local` / `.Smb` | 檔案儲存抽象 + 本機 / SMB 實作 | — |
 | `Hcs.ThirdPartyLogin` / `.Abstraction` | 第三方登入框架 + 綁定管理 | — |
 | `Hcs.ThirdPartyLogin.Google` / `.Facebook` | OAuth 實作 | — |
 | `Hcs.2FA.GoogleAuthenticator` | Google Authenticator (TOTP) | [2fa](features/2fa.md) |
@@ -221,7 +215,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Extensions.OdataClient` | OData 查詢 client(LINQ → OData URL) | — |
 | `Hcs.Extensions.RequestData` | HTTP request 資料字典 | — |
 | `Hcs.Extensions.SystemLogging` | 系統日誌服務(追蹤資料變更 / 商業行為) | — |
-| `Hcs.Extensions.Type` / `.Type.Tests` | 反射工具(友善泛型類型名稱)+ 測試 | — |
+| `Hcs.Extensions.Type` | 反射工具(友善泛型類型名稱) | — |
 | `Hcs.Extensions.Validation` | 實體驗證結果擴充(`AddErrorFor`) | [validation](core/validation-errors.md) |
 | `Hcs.Extensions.Xlsx` | Excel 序列化格式化擴充(日期/數值),搭配 `Hcs.Serialize.Xlsx` | — |
 
