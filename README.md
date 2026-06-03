@@ -72,7 +72,7 @@ options.ConfigPostApi(x =>
 - 內建按 `OrgId` 自動過濾。
 - `AllowChildOrganizationData(roleName)` — 一行宣告「擁有此 role 的使用者可看子組織資料」。
 
-機制(查詢一律過 filter pipe、寫入一律跑 Pre/Post、`ITable<T>` 執行載體)見 [core/data-pipes.md](core/data-pipes.md)。(`Organization` / `PlatformUser` / `PlatformGroup` 三層 entity 由 `Hcs.PlatformModule.Basic` 提供。)
+過濾 / 蓋 `OrgId` 的**機制**(查詢一律過 filter pipe、寫入一律跑 Pre/Post、`ITable<T>` 執行載體)見 [core/data-pipes.md](core/data-pipes.md)。**組織樹模型**(單一父組織,根為預設組織)、三層歸屬(`Organization` / `PlatformGroup` / `PlatformUser`,由 `Hcs.PlatformModule.Basic` 提供)、以及**跨組織存取「讀能上下、寫只能往下」的不對稱語意**見 [core/multi-tenant.md](core/multi-tenant.md)。
 
 ### 4. OData 查詢
 
@@ -162,8 +162,8 @@ options.ConfigPostApi(x =>
 | 專案 | 角色 | Doc |
 |---|---|---|
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
-| `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | — |
-| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | [multi-tenant](core/multi-tenant.md) |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[multi-tenant](core/multi-tenant.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
 
@@ -171,7 +171,7 @@ options.ConfigPostApi(x =>
 
 | 模組 | 用途 | Doc |
 |---|---|---|
-| `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | — |
+| `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | [multi-tenant](core/multi-tenant.md) |
 | `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
