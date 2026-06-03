@@ -80,9 +80,10 @@ options.ConfigPostApi(x =>
 
 ### 5. 驗證與授權
 
+- **登入與 Token**:多種登入模式(帳密 + 組織、`OrgKey` 組織連結、代理登入、IP 白名單)、JWT 發放、改密碼 / 改資料即時撤銷既發 token(見 [core/login.md](core/login.md))。
 - **角色即時注入**:token 驗證時把使用者 role code 注入 claim——改權限不必重發 token。
 - **權限樹**:`AddModuleFuncion` 宣告功能權限,五支 entity API 自動掛 View / Create / Modify / Delete,前後端靠權限字串對齊(見 [core/permissions.md](core/permissions.md))。
-- **強制失效**:比對 token `notBefore` 與 `UserDataChangeTime`,可單方面標記舊 token 過期。
+- **強制失效**:比對 token `notBefore` 與 `UserDataChangeTime`,可單方面標記舊 token 過期(見 [core/login.md](core/login.md))。
 - **後端驗證錯誤**:`OnValidate` 收集錯誤 → 400 → 前端 `hcs-error-summary` 顯示(見 [core/validation-errors.md](core/validation-errors.md))。
 
 ### 6. ASP.NET + Angular SPA 一體
@@ -162,7 +163,7 @@ options.ConfigPostApi(x =>
 |---|---|---|
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | — |
-| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
 
@@ -201,7 +202,7 @@ options.ConfigPostApi(x =>
 | `Hcs.ThirdPartyLogin` / `.Abstraction` | 第三方登入框架 + 綁定管理 | — |
 | `Hcs.ThirdPartyLogin.Google` / `.Facebook` | OAuth 實作 | — |
 | `Hcs.2FA.GoogleAuthenticator` | Google Authenticator (TOTP) | [2fa](features/2fa.md) |
-| `Hcs.Platform.IpWhiteListOnlyLogin` | 限制特定 IP 才能登入 | — |
+| `Hcs.Platform.IpWhiteListOnlyLogin` | 限制特定 IP 才能登入 | [login](core/login.md) |
 
 ### Extensions 套件
 
