@@ -92,7 +92,7 @@ options.ConfigPostApi(x =>
 
 - 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
-- 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、防快取驚群(`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
+- 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、快取過期時只讓單一請求重建以免一窩蜂打後端(cache stampede,`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
 ---
 
