@@ -91,7 +91,6 @@ options.ConfigPostApi(x =>
 ### 7. 其他基礎建設
 
 - 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
-- HMAC-SHA512 簽章保護的 `/api/cache` 端點。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
 - 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、防快取驚群(`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
