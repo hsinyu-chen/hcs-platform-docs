@@ -40,7 +40,7 @@ HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本
 每個業務模組實作 `IPlatformModule.Build(IPlatformModuleBuilder)`,一段 fluent 設定同時宣告:
 
 - Entity → DB 對應(`AddModel<>`)
-- 五支 RESTful API:`AddEntityApi<TKey, TEntity>` 自動產生 Get / Query / Post / Put / Delete(**不寫 Controller**,控制器在執行期動態產生)
+- 五支 RESTful API:`AddEntityApi<TKey, TEntity>` 自動產生 Get / Query / Post / Put / Delete(**不寫 Controller**,控制器在執行期動態產生;CRUD 管線、生命週期 hook、交易範圍見 [entity-api](core/entity-api.md))
 - 自訂端點:`AddQueryFlowApi<T>` / `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi`(不綁 entity 也能產出端點)
 - 子集合處理:`SaveChildsFor(s => s.Items)` / `QueryChildFor(c => c.Items)`
 - 細粒度權限樹:`AddModuleFuncion` + `AddStandardApiRoles` + `AddPermission`
