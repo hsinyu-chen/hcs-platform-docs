@@ -45,12 +45,13 @@ var api = b.AddEntityApi<long, Customer>(opt =>
 ```
 取主鍵 → [OnKeyGeted] → 查出 entity[OnQueryed] → [OnGeted] → 驗證閘門[OnValidate] → OkOrNotFound
 ```
-(`TEntity` 若實作 `IPlatformEntity`,查詢會自動 `Include` 建立者 / 最後更新者。)
+(`TEntity` 若實作 `IPlatformEntity`,**只有 Get** 會自動 `Include` 建立者 / 最後更新者。)
 
 **Query(列表 / OData)**
 ```
 OData 驗證 → 查詢 → [OnQueryed] → (投影) → 套用 $filter/$select/$orderby/$expand → [OnOdataFiltered] → 匯出處理 → 回應
 ```
+> ⚠️ Query 列表**不會**自動 Include `IPlatformEntity` 的建立者 / 更新者(只有 Get 會)。列表要帶這些關聯欄位,得靠前端 OData `$expand=CreatedByUser,LastUpdatedByUser`(且該關聯需在 `AllowExpand` 白名單內)。
 
 ### 關鍵語意
 
@@ -62,14 +63,23 @@ OData 驗證 → 查詢 → [OnQueryed] → (投影) → 套用 $filter/$select/
 
 ## 交易範圍(重要)
 
-每個請求開一個獨立 DI scope(request-scoped `DbContext`、驗證 context、pipeline state)。**寫入(Post / Put / Delete)整條管線跑在單一 DB 交易內;Get 不開交易(唯讀)。**
+每個請求開一個獨立 DI scope(request-scoped `DbContext`、驗證 context、pipeline state)。**寫入(Post / Put / Delete)整條管線跑在單一 DB 交易內;Get / Query 不開交易(唯讀)。**
 
-- 交易在 scope 內首次用到 `DbContext` 時惰性開啟(預設隔離層級 `ReadCommitted`)。
-- **整條 pipe**(`OnValidate` → 內建寫入 → `On{X}ed`)都在交易內:**任何一步拋例外就整筆 rollback**,不留半套資料;`OnValidate` 有錯(回 400)也視為失敗 → rollback。全部跑完才 **commit**。多個 `DbContext` 時 scope 結束一起 commit / rollback。
+- 交易在 scope 內首次用到 `DbContext` 時惰性開啟(預設隔離層級 `ReadCommitted`);多個 `DbContext` 時 scope 結束一起處理。
+- **rollback 只在「拋例外」時發生**:寫入步驟與 `On{X}ed` 都在交易內,任一步 throw → 整筆 rollback;沒拋例外就 **commit**。
+- **驗證失敗(`OnValidate` 回 400)不是例外**:走 `SwitchCase` 回 `BadRequest`、不 throw → 交易照常 commit、`OnAfterTransaction` 一樣跑。**這是刻意的**——`OnAfterTransaction` 無論成敗都跑,正是**記錄 / 稽核能涵蓋每個請求**(含被驗證擋下的)的關鍵。
 
-每個 `ConfigXxxApi` 都可掛四個共用 hook:`OnRequest` / `OnResponse`(pipe 頭尾),以及 **`OnBeforeTransaction`(交易前)/ `OnAfterTransaction`(commit 成功後)——這兩個在交易外**。
+各 hook 與交易的關係:
 
-> 實務鐵則:**有外部副作用、不該被 rollback 的事(寄信、推播、丟 queue、呼叫外部 API)放 `OnAfterTransaction`**——它只在 commit 成功後跑。別放 `OnCreated` / `OnUpdated`:那在交易內,後續若 rollback,信已經寄出去收不回。要跟資料一起 commit / rollback 的 DB 寫入才放 `On{X}ed`。
+| hook | 何時跑 | 拿得到 | 位置 |
+|---|---|---|---|
+| `On{X}ing` / `On{X}ed` | 驗證**通過**後(success 分支) | entity | 交易內(pre-commit) |
+| `OnBeforeTransaction` | 最前 | `HttpRequest` | 交易外(前) |
+| `OnAfterTransaction` | 結尾(含驗證 400) | `HttpRequest` | 交易外(commit 後) |
+
+> 副作用放哪,看「要不要無論成敗都跑」:**一定要跑的橫切工作(log / 稽核)→ `OnAfterTransaction`**——它就是為此而設(400 也跑、commit 後跑、參數是 `HttpRequest`)。**只在成功、且需要該筆 entity 的事(寄該筆通知)→ `OnCreated` 等 `On{X}ed`**——只在驗證通過時跑、拿得到 entity,但在 commit **之前**。
+
+> ⚠️ **不是每支端點都吃這些共用 hook**:`OnRequest` 五支都有;`OnResponse` 與兩個 transaction hook 只在 **Post / Put / Delete +(Query 非投影版)** 生效——**Get 沒串**(也無交易)、**Query 投影版未串** transaction hook。
 
 需要自管交易 / 調隔離層級時用 `SetAutoTransaction(enable, isolationLevel)`。
 
@@ -99,4 +109,4 @@ hook 內怎麼寫(inline / static / extension)、DI 怎麼注入,見 [pipe](pipe
 
 ## 不綁 entity 的自訂端點
 
-不想要整套 CRUD、只要一支自訂端點時,用 `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi` / `AddQueryFlowApi`——直接給一條 pipe(內建 `ApplyOdataFilter().Ok()` 等組合子),產出單一端點而不建立 entity 的五件套。
+不想要整套 CRUD、只要一支自訂端點時,用 `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi` / `AddDeleteFlowApi` / `AddQueryFlowApi`——直接給一條 pipe(內建 `ApplyOdataFilter().Ok()` 等組合子),產出單一端點而不建立 entity 的五件套。
