@@ -208,7 +208,7 @@ options.ConfigPostApi(x =>
 | `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | [basic](modules/basic.md) |
 | `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
-| `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
+| `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | [code-table](modules/code-table.md) |
 | `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | — |
 | `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](modules/2fa.md) |
 
@@ -218,7 +218,7 @@ options.ConfigPostApi(x =>
 |---|---|---|
 | `Hcs.Platform.ApprovalFlow.Models` | 簽核流程 entity | — |
 | `Hcs.Platform.AppUpdate.Models` | App 版本 entity | — |
-| `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | — |
+| `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | [code-table](modules/code-table.md) |
 | `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | — |
 | `Hcs.Platform.TwoFactorAuthentication.Models` | 2FA entity | [2fa](modules/2fa.md) |
 
@@ -265,7 +265,7 @@ Angular 17 SPA + ng library 套件。
 | `@hcs/basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | [basic](modules/basic.md) |
 | `@hcs/app-update` | App 版本管理 UI | — |
 | `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
-| `@hcs/code-table` | 字典/代碼表 UI | — |
+| `@hcs/code-table` | 字典/代碼表 UI | [code-table](modules/code-table.md) |
 | `@hcs/system-logging` | 稽核軌跡 UI | — |
 | `@hcs/third-party-login` | 第三方登入 UI | — |
 | `@hcs/two-factor-authentication` | 2FA UI | [2fa](modules/2fa.md) |
