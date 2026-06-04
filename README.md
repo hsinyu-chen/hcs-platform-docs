@@ -199,14 +199,14 @@ options.ConfigPostApi(x =>
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | [multi-tenant](core/multi-tenant.md) |
 | `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[multi-tenant](core/multi-tenant.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
-| `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | — |
+| `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | [approval-flow](modules/approval-flow.md) |
 
 ### Platform Modules(可選,各對應一個 `AddXxxModule()`)
 
 | 模組 | 用途 | Doc |
 |---|---|---|
 | `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | [basic](modules/basic.md) |
-| `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
+| `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | [approval-flow](modules/approval-flow.md) |
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | [code-table](modules/code-table.md) |
 | `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | [system-logging](modules/system-logging.md) |
@@ -216,7 +216,7 @@ options.ConfigPostApi(x =>
 
 | 專案 | 用途 | Doc |
 |---|---|---|
-| `Hcs.Platform.ApprovalFlow.Models` | 簽核流程 entity | — |
+| `Hcs.Platform.ApprovalFlow.Models` | 簽核流程 entity | [approval-flow](modules/approval-flow.md) |
 | `Hcs.Platform.AppUpdate.Models` | App 版本 entity | — |
 | `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | [code-table](modules/code-table.md) |
 | `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | [system-logging](modules/system-logging.md) |
@@ -242,7 +242,7 @@ options.ConfigPostApi(x =>
 
 | 專案 | 用途 | Doc |
 |---|---|---|
-| `Hcs.Extensions.ApprovalFlow` | 簽核流程領域實作(搭配 `Hcs.Platform.Flow`) | — |
+| `Hcs.Extensions.ApprovalFlow` | 簽核流程領域實作(搭配 `Hcs.Platform.Flow`) | [approval-flow](modules/approval-flow.md) |
 | `Hcs.Extensions.Collections` | 字典擴充(`AddIfNotExists` / `AddOrUpdate`) | — |
 | `Hcs.Extensions.DependencyInjection` | 命名服務工廠(按名稱解析多實作) | — |
 | `Hcs.Extensions.EntityFrameworkCore` | DbSet / Queryable 擴充(主鍵篩選等) | — |
@@ -264,7 +264,7 @@ Angular 17 SPA + ng library 套件。
 | `@hcs/core` | 平台核心 lib(`HcsComponentsModule`、`DataGridComponent`、`OdataDataSource`、`ErrorHelper`、i18n loader…) | [validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `@hcs/basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | [basic](modules/basic.md) |
 | `@hcs/app-update` | App 版本管理 UI | — |
-| `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
+| `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | [approval-flow](modules/approval-flow.md) |
 | `@hcs/code-table` | 字典/代碼表 UI | [code-table](modules/code-table.md) |
 | `@hcs/system-logging` | 稽核軌跡 UI | [system-logging](modules/system-logging.md) |
 | `@hcs/third-party-login` | 第三方登入 UI | — |
