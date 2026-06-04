@@ -209,7 +209,7 @@ options.ConfigPostApi(x =>
 | `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | [code-table](modules/code-table.md) |
-| `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | — |
+| `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | [system-logging](modules/system-logging.md) |
 | `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](modules/2fa.md) |
 
 ### Models 專案(獨立出來讓前端 / 第三方可 reference entity 定義而不依賴 server logic)
@@ -219,7 +219,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Platform.ApprovalFlow.Models` | 簽核流程 entity | — |
 | `Hcs.Platform.AppUpdate.Models` | App 版本 entity | — |
 | `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | [code-table](modules/code-table.md) |
-| `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | — |
+| `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | [system-logging](modules/system-logging.md) |
 | `Hcs.Platform.TwoFactorAuthentication.Models` | 2FA entity | [2fa](modules/2fa.md) |
 
 ### 基礎建設
@@ -250,7 +250,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Extensions.Message` / `.Email` / `.Android` / `.Ios` / `.Mitake` | 多通道發訊抽象 + SMTP / FCM / APNs / 三竹簡訊實作 | — |
 | `Hcs.Extensions.OdataClient` | OData 查詢 client(LINQ → OData URL) | — |
 | `Hcs.Extensions.RequestData` | HTTP request 資料字典 | — |
-| `Hcs.Extensions.SystemLogging` | 系統日誌服務(追蹤資料變更 / 商業行為) | — |
+| `Hcs.Extensions.SystemLogging` | 系統日誌服務(追蹤資料變更 / 商業行為) | [system-logging](modules/system-logging.md) |
 | `Hcs.Extensions.Type` | 反射工具(友善泛型類型名稱) | — |
 | `Hcs.Extensions.Validation` | 實體驗證結果擴充(`AddErrorFor`) | [validation](core/validation-errors.md) |
 | `Hcs.Extensions.Xlsx` | Excel 序列化格式化擴充(日期/數值),搭配 `Hcs.Serialize.Xlsx` | — |
@@ -266,7 +266,7 @@ Angular 17 SPA + ng library 套件。
 | `@hcs/app-update` | App 版本管理 UI | — |
 | `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
 | `@hcs/code-table` | 字典/代碼表 UI | [code-table](modules/code-table.md) |
-| `@hcs/system-logging` | 稽核軌跡 UI | — |
+| `@hcs/system-logging` | 稽核軌跡 UI | [system-logging](modules/system-logging.md) |
 | `@hcs/third-party-login` | 第三方登入 UI | — |
 | `@hcs/two-factor-authentication` | 2FA UI | [2fa](modules/2fa.md) |
 | `@hcs/two-factor-authentication-google` | Google Authenticator UI | [2fa](modules/2fa.md) |
