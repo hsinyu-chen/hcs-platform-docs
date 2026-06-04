@@ -79,6 +79,26 @@ b.AddModuleFuncion("MyApp", "Invoice", f =>
 
 ---
 
+## 權限怎麼指派給人(群組)
+
+宣告好的權限字串,**一律透過「群組」指派給使用者**——平台沒有「把權限直接掛在使用者身上」這回事:
+
+- **群組(`PlatformGroup`)持有一組角色設定(`PlatformGroupRole`)**:每筆是一個權限字串(`{Function.Code}.{PermissionCode}`)配一個**三態**——
+  - `Granted`(允許)
+  - `Denied`(拒絕)
+  - `NotSet`(未設,對這條沒意見)
+- **使用者透過 `PlatformUserGroup` 加入群組**,可同時屬多個群組。
+- **有效權限 = 所屬「啟用中」群組的 `Granted` 角色聯集**,再扣掉任一群組標為 `Denied` 的:
+  - 只有 `IsEnabled` 的群組計入,停用群組的角色一律不算。
+  - `NotSet` 完全忽略(等於沒設這條)。
+  - **`Denied` 最優先、蓋過 `Granted`**:同一條權限字串只要在**任一**所屬群組被 `Denied`,即使在別的群組是 `Granted`,使用者最終**沒有**這條權限。這讓「一個大範圍授權的群組 + 一個專門拔權的群組」能精準收權。
+
+> 這就是「[授權怎麼跑](#授權怎麼跑執行模型)」裡 role service 每次請求重撈的來源:它把使用者所屬啟用群組的 `PlatformGroupRole` 聚合成權限字串集合(先扣掉 Denied),再逐個加成 role claim。
+>
+> 指派這些的管理 UI 是 Basic 模組的群組頁(權限格設三態、成員設定),見 [modules/basic](../modules/basic.md)。
+
+---
+
 ## 前後端對齊(最容易做錯的地方)
 
 前端每個 CRUD 元件 provide 一個 `HCS_FUNCTION_NAME`(= 後端的 Function code),再用 `permission.hasPermission(verb)` 查權限:
