@@ -136,12 +136,13 @@ b.AddModuleFuncion("MyApp", "Invoice", f =>
 f.AddStandardApiRoles(api, ctx => ctx.View
     .AddOdataPermission<Invoice>(o => o
         .AllowExpand(x => x.Customer)                       // 允許 $expand=Customer
-        .AllowExpand(x => x.Lines, l => l.AllowExpand(z => z.Product))));  // 巢狀:Lines.Product
+        .AllowExpand(x => x.Lines, l => l.AllowExpand(z => z.Product))));  // 巢狀:Lines.Product（只放行 Lines.Product，不含 Lines 本身）
 ```
 
 - 白名單是**綁在權限上**的:不同權限可放行不同的 expand 路徑(例:只有 `Admin` 能展開敏感子關聯,一般 `View` 不行)。
 - 請求帶了不在白名單內的 `$expand`,查詢驗證直接擋下回 `expand {path} not allow`。
 - 使用者實際可用的白名單 = 其持有的各權限白名單的**聯集**。
+- ⚠️ **巢狀 `AllowExpand` 只放行該子路徑、不含中介層**:上例 `AllowExpand(x => x.Lines, l => …)` 只把 `Lines.Product` 加進白名單,`$expand=Lines`(不帶子項)仍會被擋(比對是 strict prefix)。要連 `Lines` 本身也放行,得再單獨加一條 `.AllowExpand(x => x.Lines)`。
 
 ---
 
