@@ -205,7 +205,7 @@ options.ConfigPostApi(x =>
 
 | 模組 | 用途 | Doc |
 |---|---|---|
-| `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | [multi-tenant](core/multi-tenant.md) |
+| `Hcs.PlatformModule.Basic` | 核心三 entity(User / Group / Organization)CRUD + 子組織授權 + Proxy Login | [basic](modules/basic.md) |
 | `Hcs.PlatformModule.ApprovalFlow` | 簽核流程引擎(流程定義、階段、動作、狀態) | — |
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
@@ -262,7 +262,7 @@ Angular 17 SPA + ng library 套件。
 | 套件 | 角色 | Doc |
 |---|---|---|
 | `@hcs/core` | 平台核心 lib(`HcsComponentsModule`、`DataGridComponent`、`OdataDataSource`、`ErrorHelper`、i18n loader…) | [validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
-| `@hcs/basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | — |
+| `@hcs/basic` | PlatformUser / PlatformGroup / Organization 的 list 與 form(對應後端 `AddBasicModule`) | [basic](modules/basic.md) |
 | `@hcs/app-update` | App 版本管理 UI | — |
 | `@hcs/approval-flow` | 簽核流程階段式編輯器 + 流程圖視覺化 | — |
 | `@hcs/code-table` | 字典/代碼表 UI | — |

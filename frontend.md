@@ -200,4 +200,4 @@ constructor(datasourceFactory: DataSourceFactory) {
 | `MENU_ITEMS` | 左側選單 | [shell](frontend/shell.md) |
 | `I18N_INDEX` | i18n 檔合併 | [i18n](core/i18n-system.md) |
 
-> **功能專屬 token** 不在此表(歸各功能 doc):2FA 掛載點 `HCS_2FA_DIALOG` 見 [2fa](modules/2fa.md);Basic 的 User/Org/Group 替換 token、SystemLogging 的值元件等,各見其功能文件。
+> **功能專屬 token** 不在此表(歸各功能 doc):2FA 掛載點 `HCS_2FA_DIALOG` 見 [2fa](modules/2fa.md);Basic 的 User/Org/Group 替換 token 見 [basic](modules/basic.md)、SystemLogging 的值元件等各見其功能文件。
