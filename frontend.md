@@ -134,8 +134,8 @@ constructor(datasourceFactory: DataSourceFactory) {
 
 1. **建模組目錄** `src/app/my-feature/`:`MyFeatureProviderModule.ts`、`route.ts`、`menu.ts`,加 `invoice/`(列表)與 `invoice-form/`(表單)兩個元件。
 2. **ProviderModule**:`forRoot()` 註冊 `MENU_ITEMS` + `I18N_INDEX`;`defaultRoute` 指向本模組路由。
-3. **list 元件**:`extends BaseListComponent<Invoice>`,provide `HCS_FUNCTION_NAME`(對應後端功能碼),`super(service, Invoice)`,建查詢用 reactive form;template 用 `<hcs-data-grid>` + `*hcsDataGridColum` 宣告欄位、`hcs-*-input` 宣告查詢條件。
-4. **form 元件**:`extends BaseFormComponent<Invoice>`,`super(service, Invoice)`,建編輯用 reactive form(含 `Validators`)。
+3. **list 元件**:`extends BaseListComponent<Invoice>`,provide `BaseComponentService`(基底依賴,非 root,漏了會 `NullInjectorError`)+ `HCS_FUNCTION_NAME`(對應後端功能碼),`super(service, Invoice)`,建查詢用 reactive form;template 用 `<hcs-data-grid>` + `*hcsDataGridColum` 宣告欄位、`hcs-*-input` 宣告查詢條件。
+4. **form 元件**:`extends BaseFormComponent<Invoice>`,provide `BaseComponentService` + `HCS_FUNCTION_NAME`,`super(service, Invoice)`,建編輯用 reactive form(含 `Validators`)。
 5. **i18n**:在 `src/assets/i18n/my-feature/{zh-tw,en-us}.json` 各放一份,loader 自動載入。
 6. **註冊**:`app.module.ts` import `MyFeatureProviderModule.forRoot()`;`app.route.ts` 加 `MyFeatureProviderModule.defaultRoute`。
 
