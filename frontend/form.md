@@ -104,7 +104,7 @@ openEdit(id: number) {
 - `isReadonly: true` → 整張 form `disable()`、純檢視。
 - `fillProperty` → 等同路由的 `$`/`$$`(見[下節](#url-帶入欄位值-預填--鎖定)),程式帶入 / 鎖定欄位。
 
-> ⚠️ **頁面狀態記憶用「路由」當 key**:列表的查詢條件 / 排序 / 捲動 / 分頁由 `PageStatusHolder` 依**目前路由**記住、回訪自動還原。對話框疊在某列表頁上時**共用那個 host 路由的 key**,所以**每個路由只存得下一組**——對話框裡若也放 `hcs-data-grid`,務必給它獨立的 `statePrifix`(預設 `'0'`),否則會和底下列表的狀態互相覆蓋。完整狀態記憶機制見 [list](list.md)。
+> ⚠️ **頁面狀態記憶用「路由」當 key**:列表的查詢 / 排序 / 捲動 / 分頁由 `PageStatusHolder` 依**目前路由**記住。對話框疊在某列表頁上時**共用那個 host 路由的 key**——對話框裡若也放 `hcs-data-grid`,給它獨立的 `statePrifix` 能切開排序 / 捲動 / 欄位設定 / 手機切換,但**查詢條件與分頁頁碼沒有 prefix、仍會和底下列表互蓋**。完整狀態記憶機制與限制見 [list](list.md)。
 
 ---
 
