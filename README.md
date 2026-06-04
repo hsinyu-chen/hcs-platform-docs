@@ -9,6 +9,7 @@ ERP 開發平台:ASP.NET Core(.NET)+ Angular 17 + OData + EF Core。後端以 fl
 ## 目錄
 
 - [這是什麼](#這是什麼)
+- [這樣設計帶來什麼](#這樣設計帶來什麼)
 - [沿革](#沿革)
 - [平台能力](#平台能力)
 - [模組開發](#模組開發)
@@ -28,9 +29,21 @@ HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本
 - Pipe 擴充模型(DI 自動注入)
 - Angular 17 SPA host 整合 + 自有 component library
 
+具體說,同一個業務功能在傳統 ASP.NET + Angular 要手寫的一整套——Controller、Repository、DTO、OData 查詢、權限檢查中介層、多租戶過濾、前端 API client——在平台上**收斂成一段 `IPlatformModule.Build` 的 fluent 宣告**,Controller / 端點 / 權限 / 過濾在執行期生成。你寫的是「這模組有哪些 entity、套什麼規則」,而不是「怎麼接 HTTP、怎麼查 DB、怎麼擋權限」。
+
 **核心精神 —— 一切組裝皆 pipe。** 平台的擴充不靠繼承、也不改框架,而是 **AOP 式「插管」**:把行為拆成一個個 pipe,掛到 CRUD / 驗證 / 查詢 / 服務注入的生命週期切點上。原則是**把邏輯切到最小可重用區塊、每個 pipe 維持短小且單一職責**——越小越短,就越能跨 entity / API / 模組自由組合與重用(參數還會自動 DI)。這是讀懂整個平台的鑰匙,見 [pipe](core/pipe.md)。
 
 簽核流程、系統稽核、字典/代碼表、App 版本、2FA、第三方登入、多通道發訊等為**可選模組**(見[專案地圖](#專案地圖))。
+
+---
+
+## 這樣設計帶來什麼
+
+- **樣板少一個量級**:一段 `IPlatformModule.Build` 宣告就是一個模組的端點 + 權限 + 多租戶過濾,沒有 Controller / Repository / DTO / mapping 的重複骨架要維護。
+- **擴充全走同一套 pipe 模式**:客製(驗證、寫入副作用、查詢加工、服務注入)雖各有對應的 pipe 介面(`IDataPipe`、`ITable` 等),但都是同一種「短小單一職責、參數自動 DI、可跨 entity / API / 模組重用」的切點組裝——學會一種就能套用其餘,不必記一堆異質 hook 與攔截點(見 [pipe](core/pipe.md))。
+- **多租戶貼合組織階層**:組織樹 + 「讀能上下、寫只能往下」直接對應 ERP 的總公司 / 分店 / 櫃位,不必每支查詢自己拼 `OrgId` 條件(見 [multi-tenant](core/multi-tenant.md))。
+- **權限即時生效**:改角色不必重發 token、改密碼 / 改資料即時撤銷舊 token——權限變動不卡在登入週期(見 [login](core/login.md))。
+- **前後端用同一條功能字串對齊**:後端宣告的功能碼 = 前端權限判斷 = 選單顯示依據;SDK 元件(grid / form / datasource)直接對接自動生成的 OData 端點,不手寫 API client。
 
 ---
 
