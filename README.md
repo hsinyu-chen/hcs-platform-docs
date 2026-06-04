@@ -210,7 +210,7 @@ options.ConfigPostApi(x =>
 | `Hcs.PlatformModule.AppUpdate` | App 版本管理,支援多平台多產品的版本檢查 | — |
 | `Hcs.PlatformModule.CodeTable` | 字典/代碼表機制(含 i18n) | — |
 | `Hcs.PlatformModule.SystemLogging` | 稽核軌跡記錄(宣告式 diff / 欄位審查 / reference 解析) | — |
-| `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](features/2fa.md) |
+| `Hcs.PlatformModule.TwoFactorAuthentication` | 2FA 框架(可擴充多 provider) | [2fa](modules/2fa.md) |
 
 ### Models 專案(獨立出來讓前端 / 第三方可 reference entity 定義而不依賴 server logic)
 
@@ -220,7 +220,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Platform.AppUpdate.Models` | App 版本 entity | — |
 | `Hcs.Platform.CodeTable.Models` | 代碼表 entity(含 i18n) | — |
 | `Hcs.Platform.SystemLogging.Models` | 稽核日誌 entity | — |
-| `Hcs.Platform.TwoFactorAuthentication.Models` | 2FA entity | [2fa](features/2fa.md) |
+| `Hcs.Platform.TwoFactorAuthentication.Models` | 2FA entity | [2fa](modules/2fa.md) |
 
 ### 基礎建設
 
@@ -235,7 +235,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Serialize.Xlsx` | 以 ClosedXML 為底的 Excel 動態序列化 | — |
 | `Hcs.ThirdPartyLogin` / `.Abstraction` | 第三方登入框架 + 綁定管理 | — |
 | `Hcs.ThirdPartyLogin.Google` / `.Facebook` | OAuth 實作 | — |
-| `Hcs.2FA.GoogleAuthenticator` | Google Authenticator (TOTP) | [2fa](features/2fa.md) |
+| `Hcs.2FA.GoogleAuthenticator` | Google Authenticator (TOTP) | [2fa](modules/2fa.md) |
 | `Hcs.Platform.IpWhiteListOnlyLogin` | 限制特定 IP 才能登入 | [login](core/login.md) |
 
 ### Extensions 套件
@@ -268,8 +268,8 @@ Angular 17 SPA + ng library 套件。
 | `@hcs/code-table` | 字典/代碼表 UI | — |
 | `@hcs/system-logging` | 稽核軌跡 UI | — |
 | `@hcs/third-party-login` | 第三方登入 UI | — |
-| `@hcs/two-factor-authentication` | 2FA UI | [2fa](features/2fa.md) |
-| `@hcs/two-factor-authentication-google` | Google Authenticator UI | [2fa](features/2fa.md) |
+| `@hcs/two-factor-authentication` | 2FA UI | [2fa](modules/2fa.md) |
+| `@hcs/two-factor-authentication-google` | Google Authenticator UI | [2fa](modules/2fa.md) |
 | `create-hcs-app` | 專案產生器 schematics(`npm create hcs-app`) | — |
 
 > 另有 submodule `external/OdataQueryLite`(新版 OData 查詢引擎,獨立 repo),不在本表。

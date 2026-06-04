@@ -249,4 +249,4 @@ HcsBasicProviderModule.createRoute({
 - 前後端驗證錯誤 — [core/validation-errors](../core/validation-errors.md)
 - 檔案欄位的後端機制 — [core/file-upload](../core/file-upload.md)
 - 後端 CRUD 管線 / 生命週期 hook — [core/entity-api](../core/entity-api.md)
-- 2FA 掛 `HCS_FORM_SUBMIT_SERVICE` 攔截 — [features/2fa](../features/2fa.md)
+- 2FA 掛 `HCS_FORM_SUBMIT_SERVICE` 攔截 — [modules/2fa](../modules/2fa.md)

@@ -35,7 +35,7 @@ export interface ILoginStatusCodeHandler {
 - 回**新 data**(如原 data + OTP)→ 平台拿它**遞迴重登**(`baseLogin(ndata)`)。
 - 回 **`false`** → 中止,什麼都不做。
 
-成功回應帶 code、或錯誤回應帶 code,**兩條路徑都會觸發 handler**。2FA 就是登入回「需要 2FA」碼 → handler 跳 2FA 對話框拿驗證碼 → 回帶碼的 data 重登(見 [features/2fa](../features/2fa.md))。
+成功回應帶 code、或錯誤回應帶 code,**兩條路徑都會觸發 handler**。2FA 就是登入回「需要 2FA」碼 → handler 跳 2FA 對話框拿驗證碼 → 回帶碼的 data 重登(見 [modules/2fa](../modules/2fa.md))。
 
 ```typescript
 { provide: HCS_LOGIN_STATUS_CODE_HANDLER, useClass: TwoFactorChallengeHandler, multi: true }
@@ -105,6 +105,6 @@ OAuth 登入頁與綁定流程由 `third-party-login` library 提供(登入鈕�
 ## 關聯
 
 - 後端登入流程 / JWT / Token 撤銷 / OrgKey / Proxy / IP 白名單 — [core/login.md](../core/login.md)
-- 2FA 挑戰(掛 `HCS_LOGIN_STATUS_CODE_HANDLER`)— [features/2fa](../features/2fa.md)
+- 2FA 挑戰(掛 `HCS_LOGIN_STATUS_CODE_HANDLER`)— [modules/2fa](../modules/2fa.md)
 - 登入頁語系鈕同源、user-menu 插槽 — [shell](shell.md)
 - 多租戶與組織(登入後落在哪個組織)— [core/multi-tenant](../core/multi-tenant.md)
