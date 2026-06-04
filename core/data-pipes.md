@@ -99,7 +99,7 @@ public interface IDataFilterPipe<TEntity>
 | pipe | 套在 | phase | 做什麼 |
 |---|---|---|---|
 | `PlatformEntityPipe<T>` | `IPlatformEntity` | PreCreate / PreUpdate | 蓋 `CreatedBy`/`CreatedTime`(建立)、`LastUpdatedBy`/`LastUpdatedTime`(更新);更新時鎖住 `CreatedBy`/`CreatedTime` 與標了 `[IgnoreOnUpdate]` 的欄位不被改 |
-| `OrganizedPipe<T>` | `IOrganized` | PreCreate / PreUpdate | 蓋 `OrgId` 為當前使用者組織;更新時**鎖 `OrgId` 不被改**(防把資料搬到別的組織),除非開了子組織授權且目標在可及範圍 |
+| `OrganizedPipe<T>` | `IOrganized` | PreCreate / PreUpdate | 蓋 `OrgId` 為目前使用者組織;更新時**鎖 `OrgId` 不被改**(防把資料搬到別的組織),除非開了子組織授權且目標在可及範圍 |
 | `OrganizedDataFilter<T>` | `IOrganized` | (查詢) | 查詢時自動 `Where(x => x.OrgId == 使用者組織)`;依 `OrganizationDataFilterSetting` 的 `AllowChildOrganizationData` / `AllowParentsData` **各自獨立** OR 加掛子組織 / 上層組織範圍 |
 
 所以你的 entity 只要 `: IOrganized`,**完全不必寫任何過濾 code**,查詢自動只回自己組織的資料、寫入自動蓋 OrgId、且不能被搬走。這正是多租戶「隱形」的來源。
@@ -154,6 +154,6 @@ moduleBuilder.ConfigDataPipe<Invoice>(opt => opt.AddFilter(b =>
 `IDataPipeProvider<T>` 把 pipe 分兩層跑,**scoped 先、DI 後**:
 
 - **DI 層**:`ConfigDataPipe` 在模組設定期註冊的,進程全域、每個請求都在。
-- **scoped 層**:`IScopedDataPipeProvider<T>` 的 `ScopedDataPipes` / `ScopedFilterPipes` 是**可變 list**,讓你在請求**執行期動態**往當前 entity 加一條臨時 pipe(只活在這個請求 scope)。
+- **scoped 層**:`IScopedDataPipeProvider<T>` 的 `ScopedDataPipes` / `ScopedFilterPipes` 是**可變 list**,讓你在請求**執行期動態**往目前 entity 加一條臨時 pipe(只活在這個請求 scope)。
 
 多數情況只用 DI 層(`ConfigDataPipe`)。需要「依執行期狀態臨時加一條 filter / pipe」時才碰 scoped 層。

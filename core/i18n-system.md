@@ -46,7 +46,7 @@
 | `#{path}` | 整個值 ref 到另一路徑(**可指向子樹**) | `"#{models.Sales}"`、`"#{../common.done}"` |
 | `@{path}` | 內插 ref,可與文字混用 | `"生@{../../../functions.X}日"` |
 
-- **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對當前 key 所在節點)。
+- **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對目前 key 所在節點)。
 - self-reference 會 `console.error`;目標路徑不存在會 `console.warn`。
 
 ### 4. 使用方式
@@ -60,7 +60,7 @@
   | `errorMessage` | `errors \| errorMessage` | `errors.{key}`(驗證錯誤) |
   | `permissionTranslate` | `perm \| permissionTranslate:'CodeType'` | `permissions.{code}.{perm}` |
   | `translateIfExists` | `key \| translateIfExists:'default':params` | key 不存在時回預設值;第三參 `params` 同 `translate` 可內插 |
-  | `i18nNames` | `obj \| i18nNames` | 從物件的 Lang/Text 清單取當前語言(非字典) |
+  | `i18nNames` | `obj \| i18nNames` | 從物件的 Lang/Text 清單取目前語言(非字典) |
   | `enumOptions` | `Enum \| enumOptions` | 轉 `{value,text}[]`(純前端,不翻譯) |
 
   > **查無 key 時的 fallback 各 pipe 不一致**:`enumTranslate` 回原 `value`;`permissionTranslate` 依序找 `permissions.{code}.{perm}` → `permissions.{perm}`,兩者皆無回 `perm` 原字串;`translateIfExists` 回你給的 default。
@@ -92,7 +92,7 @@
 
 `#{}` / `@{}` link **前後端都會 resolve**:前端 `PlatformTranslateLoader` 在巢狀樹上 lazy getter 解析;後端 `JsonFileTranslate` 在扁平 map 上載入時 eager 解析(`ResolveLinks`)。兩邊語意對齊:
 
-- **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對當前 key 所在節點);整值 `#{}` 可指向子樹,`@{}` 內插與文字混用。
+- **path**:絕對(`a.b.c`)或相對(`./`、`../`,以 `/` 分段,相對目前 key 所在節點);整值 `#{}` 可指向子樹,`@{}` 內插與文字混用。
 - **fallback**:整值 `#{}` 解不到 → 該 key 無 entry(`Get` 回 key);內插 `@{}` 段解不到 → 該段空字串;self-ref / 循環 → 偵測後當解不到(後端靜默,前端 `console.error/warn`)。內插 `@{}` 段若指到**子樹**(非單一值):後端視為解不到 → 空字串,前端 `nestedGet` 拿到物件 → stringify 成 `[object Object]`(實務上不會在內插指子樹,後端行為較合理)。
 - **子樹 ref 在後端的呈現**:扁平 map 沒有「指向子樹」的單一 entry,改以**展開**呈現——`#{models.Sales}` 會把 `models.Sales.*` 的葉節點複製到來源 prefix 底下。因此 ref 節點本身(`models.MyApp.Sales`)在後端**不是 scalar、查無 entry**,但其下的葉(`...Sales.Customer.Name`)都查得到,結果與前端一致。
 - `{{}}` 內插兩邊都支援,但 params 來源不同:前端由 ngx-translate 呼叫端給、後端由 `ITranslate.Get` 的 `parameters` 字典給。link resolve(載入期)發生在 `{{}}` 替換(執行期)**之前**,兩者不衝突——`#{}` 指到含 `{{field}}` 的值時,佔位會被保留到 `Get` 才填。

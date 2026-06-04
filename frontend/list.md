@@ -214,7 +214,7 @@ grid 會依裝置自動切版面:桌面用**表格**、手機用**卡片**(`useP
 查詢條件、排序、捲動位置、分頁頁碼**會被記住、回訪自動還原**——由 `PageStatusHolder` 存(查詢表單走 `bindFormGroup`、grid 狀態走 `getAccessor`),底層是 `page-state-container`(sessionStorage)/ `site-state-container`(localStorage),**不是裸 storage**(前端不直接碰 `localStorage`/`sessionStorage` 的約定見 [frontend](../frontend.md))。
 
 - **`HCS_ENABLE_STATE`**(boolean):`false` → 排序 / 分頁改用臨時值、**不持久**(離開就忘)。
-- **`hcs-pager`**(放 `grid-foot`):顯示總筆數 / 當前範圍、提供每頁筆數選單。`pageSize`(預設 `20`)、`pageSizeOptions`(`[20,50,100,200]`)。注意兩者生命週期不同:**pageSize 記在 `UserStateStorage`(跟使用者帳號走)、page 頁碼走 `PageStatusHolder` 的 sessionStorage(關分頁就忘)**。換查詢(`grid.reset()`)會回到第 1 頁。
+- **`hcs-pager`**(放 `grid-foot`):顯示總筆數 / 目前範圍、提供每頁筆數選單。`pageSize`(預設 `20`)、`pageSizeOptions`(`[20,50,100,200]`)。注意兩者生命週期不同:**pageSize 記在 `UserStateStorage`(跟使用者帳號走)、page 頁碼走 `PageStatusHolder` 的 sessionStorage(關分頁就忘)**。換查詢(`grid.reset()`)會回到第 1 頁。
 
 > ⚠️ **state 用「路由」當 key。** `hcs-data-grid` 的 `@Input statePrifix`(預設 `'0'`,原碼拼字 Prifix)**只切開這四項**:排序、捲動位置、欄位設定、手機/桌面切換——同頁多個 grid 給不同 `statePrifix` 能把這些區隔開。**但查詢條件(filter form)與分頁頁碼沒有 prefix 機制**(key 分別寫死成 `'form'` / `'pager-page'`、只認路由),所以**同一路由放兩組獨立查詢的列表,查詢與頁碼一定互蓋,`statePrifix` 救不了**——真要避免就別在同路由擺兩個獨立查詢的列表。網址帶 `?clear=1`(或選單導航)會清掉該頁記住的狀態。
 

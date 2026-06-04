@@ -58,7 +58,7 @@ moduleBuilder.AddCodeTableDeleteValidateRef<Order>(x => x.StatusCodeId);
 
 每筆代碼表可掛多筆 `CodeTablei18n` 子記錄(`Lang` + 該語系的 `Text`)。取用時:
 
-- 依**當前語系**挑對應的 `CodeTablei18n.Text`;
+- 依**目前語系**挑對應的 `CodeTablei18n.Text`;
 - 找不到對應語系 → 退回代碼表本身的預設 `Text`。
 
 後端不做自動翻譯、不依使用者語系過濾——它只負責原樣存 `(Lang, Text)`,語系挑選與後援在前端 `CodeTableService` 做。
@@ -88,7 +88,7 @@ moduleBuilder.AddCodeTableDeleteValidateRef<Order>(x => x.StatusCodeId);
 {{ row.statusId | codeTableViewer:'Status' }}
 ```
 
-第一參數是值、第二是代碼表 `Type`,回該值對應的 `text`(套當前語系)。
+第一參數是值、第二是代碼表 `Type`,回該值對應的 `text`(套目前語系)。
 
 ### 取用設定 `ICodeTablePipeData`
 
@@ -96,7 +96,7 @@ moduleBuilder.AddCodeTableDeleteValidateRef<Order>(x => x.StatusCodeId);
 
 | 屬性 | 用途 |
 |---|---|
-| `isDefaultOrg` | `true` = 取**預設組織**的共用代碼表,而非當前使用者組織的(全域共用 vs 組織專屬) |
+| `isDefaultOrg` | `true` = 取**預設組織**的共用代碼表,而非目前使用者組織的(全域共用 vs 組織專屬) |
 | `isEnadled` | `true` = 只回 `IsEnabled` 的列(⚠️ 屬性名是 `isEnadled`,code 裡的拼字,別寫成 `isEnabled`) |
 | `codeSplit` | 分隔字元——把 `Code` 欄依此切成 `code` 字串陣列 |
 | `checkMinute` | 快取保鮮分鐘數,**預設 10 分鐘**;設 `0` = 每次即時重抓 |
@@ -130,7 +130,7 @@ imports: [ HcsCodeTableProviderModule.forRoot() ]   // 只提供 I18N_INDEX 'cod
 - **`isEnadled` 是 code 裡的拼字**:設定屬性名就是少一個字母,寫成 `isEnabled` 不會生效。
 - **刪除帶 `Code` 的列要 Admin**:純顯示用(無 `Code`)的列一般 `Delete` 權即可刪;有 `Code`(被邏輯依賴)的列改需 `Admin`。
 - **快取可能不即時**:pipe 預設 10 分鐘才重抓代碼表;後台剛改完選項要馬上反映,取用端得帶 `{ checkMinute: 0 }`。
-- **預設組織 = 全域共用代碼**:不帶 `isDefaultOrg` 拿的是當前組織自己的代碼表;跨組織共用的字典要放在預設組織並以 `isDefaultOrg: true` 取用。
+- **預設組織 = 全域共用代碼**:不帶 `isDefaultOrg` 拿的是目前組織自己的代碼表;跨組織共用的字典要放在預設組織並以 `isDefaultOrg: true` 取用。
 
 ---
 

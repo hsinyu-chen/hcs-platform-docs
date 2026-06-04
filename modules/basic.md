@@ -17,7 +17,7 @@ builder.AddBasicModule();
 - **三個 entity API**:`PlatformUser` / `PlatformGroup` / `Organization` 的標準 CRUD（含 OData 查詢、匯出、系統稽核）。
 - **子組織授權 entity**:`AuthorizedOrganization`（父→子組織的授權關聯），歸在 `Basic.Organization.Admin` 權限下。
 - **一組非 CRUD flow API**:批次更新群組角色 / 使用者群組、取得 OrgKey、子組織查詢 / 批次加入、代理登入。
-- **三條資料過濾**:`PlatformUser` / `PlatformGroup` / `Organization` 各掛一條組織過濾，讓清單只回當前組織可見的資料(機制見 [data-pipes](../core/data-pipes.md))。
+- **三條資料過濾**:`PlatformUser` / `PlatformGroup` / `Organization` 各掛一條組織過濾，讓清單只回目前組織可見的資料(機制見 [data-pipes](../core/data-pipes.md))。
 
 ---
 
@@ -61,12 +61,12 @@ Basic 註冊三個功能（function），各自帶標準 / 自訂權限:
 
 `AuthorizedOrganization`(父→子組織授權)歸在 `Basic.Organization.Admin` 權限下,讓組織建立「我可以往下管哪些子組織」的關係(配合多租戶的「寫只能往下」)。除了直接 CRUD,還有幾條相關行為:
 
-- **建立組織時可一鍵授權**:POST 新組織時若帶 `JoinSubOrg = true`,系統自動建一筆「當前使用者組織 → 新組織」的授權——建完新組織它就已經是你的子組織,不必再手動加。
+- **建立組織時可一鍵授權**:POST 新組織時若帶 `JoinSubOrg = true`,系統自動建一筆「目前使用者組織 → 新組織」的授權——建完新組織它就已經是你的子組織,不必再手動加。
 - **批次加子組織**(`Sub.Orgs.BatchAdd`):一次掛多筆子組織授權,已存在的關聯會跳過(不重複建)。`Admin` 權限**只開放查 / 刪 + 這支批次加**,沒開放 `AuthorizedOrganization` 的直接 Post / Put——所有新增都統一走 `Sub.Orgs.BatchAdd`,授權頁也不提供編輯 / 複製。
 - **可選子組織清單**(`Sub.Orgs`)有排除規則,所以授權頁的下拉**不會列出所有組織**:
   - 永遠排除自己。
-  - 若當前是預設(admin)組織:排除已是其直接子組織者。
-  - 若當前不是 admin 組織:排除 admin 組織本身、且只列「無父組織」或「唯一父組織就是 admin」的組織——即一個非 admin 組織不能同時被兩個非 admin 組織當子組織。
+  - 若目前是預設(admin)組織:排除已是其直接子組織者。
+  - 若目前不是 admin 組織:排除 admin 組織本身、且只列「無父組織」或「唯一父組織就是 admin」的組織——即一個非 admin 組織不能同時被兩個非 admin 組織當子組織。
 
 > 組織階層設計上是**單父樹**(root 為預設組織);上面的排除規則就是在維持這個單父不變式。多對多的 `AuthorizedOrganization` 只是它的 DB 表示法,見 [multi-tenant](../core/multi-tenant.md)。
 
@@ -129,11 +129,11 @@ imports: [ HcsBasicProviderModule.forRoot() ]
 
 ## 管理頁的運作與權限關係
 
-三個 entity 的管理頁各有一套**依當前登入者 / 目標身分 / 持有權限**收放功能的規則,有些(尤其群組)是核心運作方式、有些是防呆。⚠️ 共通前提:這些幾乎都是**前端管理頁的呈現與防呆**(藏按鈕、鎖欄位、前端跳過存檔),**不是後端硬性安全閘**——直接打 API 不一定都擋得住,真正的權限邊界仍是後端角色檢查。想改掉任何一條,就得整頁替換(見下面的 `createRoute` override),因為它們寫在內建頁元件裡。
+三個 entity 的管理頁各有一套**依目前登入者 / 目標身分 / 持有權限**收放功能的規則,有些(尤其群組)是核心運作方式、有些是防呆。⚠️ 共通前提:這些幾乎都是**前端管理頁的呈現與防呆**(藏按鈕、鎖欄位、前端跳過存檔),**不是後端硬性安全閘**——直接打 API 不一定都擋得住,真正的權限邊界仍是後端角色檢查。想改掉任何一條,就得整頁替換(見下面的 `createRoute` override),因為它們寫在內建頁元件裡。
 
 ### 使用者
 
-- **改別人的所屬組織要 `Basic.PlatformUser.AllowChildOrgData`**:沒這權限表單看不到「組織」選擇器,新增的使用者一律落在當前組織;**編輯既有使用者時「組織」欄一律唯讀**——這頁不能把人搬到別的組織。
+- **改別人的所屬組織要 `Basic.PlatformUser.AllowChildOrgData`**:沒這權限表單看不到「組織」選擇器,新增的使用者一律落在目前組織;**編輯既有使用者時「組織」欄一律唯讀**——這頁不能把人搬到別的組織。
 - **不能改自己的群組**:編輯自己時群組指派區塊整段隱藏、按存檔也直接略過——避免自我提權 / 降權把自己鎖在外面。要改自己的群組得由別的管理者操作。
 - **不能刪 / 停用組織管理員**:清單對 `IsOrgAdmin` 的使用者隱藏刪除鈕、表單對 `IsOrgAdmin` 隱藏「狀態(啟用 / 停用)」欄。
 - **不能代理登入自己**:清單代理鈕對自己那列隱藏(且需 `.ProxyLogin`,見上)。
@@ -150,7 +150,7 @@ imports: [ HcsBasicProviderModule.forRoot() ]
 
 - **`JoinSubOrg`(建立時自動成為我的子組織)只在新增時出現**:非 `Basic.Organization.Admin` 時此開關被鎖定為開(一定自動加),只有 `Admin` 能取消(後端對應的 `AutoJoinSubOrg` 副作用見上「子組織授權」)。
 - **清單「子組織」鈕需 `Basic.Organization.Admin`**:點進子組織授權頁;「組織連結」鈕則對所有人開放。
-- **子組織授權頁**:新增需 `Admin`,父組織固定為當前組織(鎖定),不提供複製 / 編輯。
+- **子組織授權頁**:新增需 `Admin`,父組織固定為目前組織(鎖定),不提供複製 / 編輯。
 
 ---
 

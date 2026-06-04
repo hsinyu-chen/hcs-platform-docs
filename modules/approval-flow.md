@@ -103,8 +103,8 @@ options.AddFlowCode<Invoice>("Invoice", opt =>
 
 | 名稱 | 是 | 典型用途 |
 |---|---|---|
-| `ViewerSender` | 當前操作者 | 條件比對「是不是本人」 |
-| `Assigned` | 當前關卡被指派的人 | 分流沿用同一批人 |
+| `ViewerSender` | 目前操作者 | 條件比對「是不是本人」 |
+| `Assigned` | 目前關卡被指派的人 | 分流沿用同一批人 |
 | `Applicant` | 送單者(第一關的建立者) | 把某關退回給申請人 |
 | `LastStageUsers` | 上一關的簽核者 | 加簽 / 回上一關 |
 | `CurrentFlowStateCount` / `TotalFlowStateCount` | 進行中 / 全部的簽核歷程數 | 條件控管併發單數 |
@@ -128,7 +128,7 @@ options.AddFlowCode<Invoice>("Invoice", opt =>
 幾個非直覺點:
 
 - **多條定義並存**:取可用動作時,引擎會把該代碼下**所有啟用**定義的 Start 動作都列出來——所以「送單」階段可能同時看得到多條流程的起點。
-- **狀態碼防竄改 / 防過期**:每筆歷程的識別(state + 當前 sequence)被 AES 加密成一段 `StateCode` 發給前端,送出時解密並比對「現在的當關是否仍是當時那一關」——關卡已被別人推進就拒收這次送出。
+- **狀態碼防竄改 / 防過期**:每筆歷程的識別(state + 目前 sequence)被 AES 加密成一段 `StateCode` 發給前端,送出時解密並比對「現在的當關是否仍是當時那一關」——關卡已被別人推進就拒收這次送出。
 - **重複回應擋掉**:同一人在同一關已回應過就不再受理。
 
 ---
@@ -177,7 +177,7 @@ imports: [ HcsApprovalFlowProviderModule.forRoot() ]   // 提供 i18n、選單
 </hcs-approval-flow-action>
 ```
 
-- 依 `code` + `objectId` 載入當前可用動作,渲染成按鈕。
+- 依 `code` + `objectId` 載入目前可用動作,渲染成按鈕。
 - 按下時:若動作要求填意見而沒填則擋下;否則跳確認框 → 送出 → 重載動作;預設連帶重整整張表單(`autoReloadForm`),`(updated)` 事件也會發出供外部接手。
 
 > 簽核流程的客製化集中在**後端的 provider / event handler** 與**設計器畫的流程**;前端動作元件本身沒有額外的注入式擴充點,照 `[code]`/`[objectId]` 用即可。

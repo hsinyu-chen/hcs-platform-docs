@@ -148,7 +148,7 @@ imports: [ HcsSystemLoggingProviderModule.forRoot() ]   // 提供 i18n、選單�
 m.SetClientType(x => x.SomeField, "MyType");   // 對應前端 clientType: 'MyType'
 ```
 
-元件內以 `@Inject(SYSTEM_LOG_VALUE)` 取得當前值(`ISystemLogValue`:含 `value` / `clientType` / `type` / `field` / `clientTypeData`)。
+元件內以 `@Inject(SYSTEM_LOG_VALUE)` 取得目前值(`ISystemLogValue`:含 `value` / `clientType` / `type` / `field` / `clientTypeData`)。
 
 ---
 
