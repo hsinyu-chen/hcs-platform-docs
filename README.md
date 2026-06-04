@@ -278,24 +278,10 @@ Angular 17 SPA + ng library 套件。
 
 ## 開發者快速上手
 
-### 加一個業務功能(後端)
+操作型 step-by-step 指南放在 [`skills/`](skills/)。每篇同時是人讀的 how-to,也是可被 LLM agent 觸發的 skill(帶 frontmatter、骨架自洽);骨架取自實際編譯 + 跑通的最小 app。
 
-1. 建模組專案 `Hcs.PlatformModule.<YourFeature>`,加一個 class 實作 `IPlatformModule`。
-2. `Build` 裡描述業務:
+- [建立一個新專案](skills/platform-create-project.md) — 從零起後端 host + 前端 app + 第一個 admin + dev loop + DB schema 管理
+- [建立一個模組](skills/platform-create-module.md) — entity 的容器:後端 `IPlatformModule` + 前端 feature/provider module + 選單,接進 app
+- [往模組加一顆 Entity](skills/platform-add-entity.md) — 後端 CRUD API + 前端列表/表單頁,端到端(可重複)
 
-   ```csharp
-   public void Build(IPlatformModuleBuilder b)
-   {
-       b.AddModel<MyFeature.ModelConfig>();
-       var api = b.AddEntityApi<long, Invoice>(opt =>
-       {
-           opt.AllowChildOrganizationData("MyFeature.Invoice.ChildOrgData");
-           opt.ConfigPostApi(x => x.OnValidate(v => v.Unique(u =>
-               u.AddProperty(p => p.No).AddProperty(p => p.OrgId))));
-       });
-       b.AddModuleFuncion("MyFeature", "Invoice",
-           o => o.AddStandardApiRoles(api));
-   }
-   ```
-
-3. 註冊到 host:在 `AddHcsPlatform(...)` 裡加 `builder.AddModule<MyFeature.ModuleConfig>();`。
+各能力的概念與 gotcha 見上面[平台能力](#平台能力) / [前端](#前端) / [模組開發](#模組開發) 各篇。
