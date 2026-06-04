@@ -147,3 +147,57 @@ constructor(datasourceFactory: DataSourceFactory) {
 
 - `npm start` dev server(HTTPS + proxy 至 `/api`)、`npm run build-lib` 建 SDK library、`npm run prod-build` 出 production(輸出至後端 `wwwroot/`)。
 - 同一份 codebase 透過 **Capacitor 5 + Ionic 7** 同時跑 Web / iOS / Android;`HcsPlatform` service 判斷執行環境;build 時用 `--configuration=app` 切 native。
+
+---
+
+## 平台前端開關總覽(opt-in 索引)
+
+平台前端的對外設定點幾乎都是 `HCS_*` 的 Angular `InjectionToken`。**很多是「不 provide 就用不到」的隱形 opt-in**(如閒置自動登出),所以這裡列一張全集當發現性樞紐;細節各看對應能力篇。
+
+> 維護契約:**之後任何 PR 新增 / 改 `HCS_*` token,同 PR 補這張表 + 對應能力篇。**
+
+### 全域開關
+
+| Token | 用途 | 預設(沒 provide 時) | 文件 |
+|---|---|---|---|
+| `HCS_IDLE_TIMEOUT_MINUTES` | 閒置自動登出分鐘數 | 未給 / `≤0` = 關 | [login](frontend/login.md) |
+| `HCS_EXPORT_LIMIT` | 匯出筆數上限 | **無 fallback,必須 provide** | [list](frontend/list.md) |
+| `HCS_ENABLE_EXPORT` | 匯出 + 列選取總開關 | undefined → `true` | [list](frontend/list.md) |
+| `HCS_ENABLE_STATE` | 排序 / 分頁狀態持久化 | 由 host 提供;`false` = 不持久 | [list](frontend/list.md) |
+| `HCS_GOOGLELOGIN_CLIENTID` | Google OAuth client id | 用 Google 登入才需給 | [login](frontend/login.md) |
+| `HCS_LANG_OPTIONS` | 可選語系 | `['zh-tw','en-us']`(forRoot) | [i18n](core/i18n-system.md) |
+| `HCS_DEFAULT_LANG` | 預設語系 | `'zh-tw'`(forRoot) | [i18n](core/i18n-system.md) |
+| `HCS_FUNCTION_NAME` / `_ROUTE` | 頁面對應的後端功能碼 / 路由 | 每頁自行 provide | [form](frontend/form.md) / [permissions](core/permissions.md) |
+
+### 設定值
+
+| Token | 用途 | 預設 | 文件 |
+|---|---|---|---|
+| `HCS_DEFAULT_APP_CONFIG` | header 四鈕(home/scan/fullScreen/notification) | `{home:true, scan:false, fullScreen:false, notification:true}` | [shell](frontend/shell.md) |
+| `CKEDITOR_CONFIG` | RichText 編輯器設定 | fallback `DefaultCkEditorConfig` | [form](frontend/form.md) |
+| `HCS_EXPANSION_PANEL_DEFAULT_OPTIONS` | 表單區塊預設展開 | `{ expand: true }` | [form](frontend/form.md) |
+| `HCS_LOCALE_FORMATS` | 日期 / 數字 locale 格式 | host 提供 | [i18n](core/i18n-system.md) |
+
+### 攔截 service(multi,回 `false` 中止)
+
+| Token | 介面 | 時機 | 文件 |
+|---|---|---|---|
+| `HCS_FORM_SUBMIT_SERVICE` | `IFormService` | 表單送出前 | [form](frontend/form.md) |
+| `HCS_FORM_MODEL_LOADED_SERVICE` | `IFormService` | 表單載入後 | [form](frontend/form.md) |
+| `HCS_LIST_SERVICE` | `IListService` | 刪除前 | [list](frontend/list.md) |
+| `HCS_USER_STATE_SERVICE` | `IUserStateService` | 登入 / 登出前後 | [login](frontend/login.md) |
+| `HCS_LOGIN_STATUS_CODE_HANDLER` | `ILoginStatusCodeHandler` | 登入挑戰(2FA 等) | [login](frontend/login.md) |
+| `HCS_PRINT_SERVICE` | `IPrint` | 列印 | [list](frontend/list.md) |
+
+### 組件插槽(multi,「加」不是「換」)
+
+| Token | 掛在哪 | 文件 |
+|---|---|---|
+| `HCS_INDEX_COMPONENT` | 首頁區塊 | [shell](frontend/shell.md) |
+| `HCS_TOOLBAR_COMPONENT` | 頂部工具列 | [shell](frontend/shell.md) |
+| `HCS_USER_MENU_COMPONENT` | 使用者選單 | [shell](frontend/shell.md) |
+| `HCS_LOGIN_PAGE_COMPONENT` | 登入頁底部 | [login](frontend/login.md) |
+| `MENU_ITEMS` | 左側選單 | [shell](frontend/shell.md) |
+| `I18N_INDEX` | i18n 檔合併 | [i18n](core/i18n-system.md) |
+
+> **功能專屬 token** 不在此表(歸各功能 doc):2FA 掛載點 `HCS_2FA_DIALOG` 見 [2fa](features/2fa.md);Basic 的 User/Org/Group 替換 token、SystemLogging 的值元件等,各見其功能文件。

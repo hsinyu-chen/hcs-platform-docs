@@ -168,7 +168,7 @@ options.ConfigPostApi(x =>
 
 **資料抓取、分頁、查詢條件轉 OData、存檔、驗證錯誤顯示**由基底類別與 `DataSourceFactory.getDataSource(Entity)` 處理——**使用端不需自己寫 API 呼叫**,只要把 datasource 指向 entity model(對應後端 `/api/odata/<Entity>`)。
 
-完整前端 SDK 說明(library 清單、7 個 SDK 慣例、`@hcs/core` 內容、新增功能步驟)見 [frontend.md](frontend.md)。
+完整前端 SDK 說明(library 清單、7 個 SDK 慣例、`@hcs/core` 內容、新增功能步驟)見 [frontend.md](frontend.md)。各能力的深入文件:[表單](frontend/form.md)、[列表 / 資料表格](frontend/list.md)、[輸入元件](frontend/controls.md)、[外殼 / 版面](frontend/shell.md)、[登入(前端)](frontend/login.md)。
 
 ---
 
