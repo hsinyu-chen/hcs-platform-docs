@@ -212,6 +212,51 @@ export class InvoiceFormComponent extends BaseFormComponent<Invoice> {
 
 ---
 
+## 常見客製（純 CRUD 之外）
+
+到這裡列表 / 表單已能增刪改查。實務上幾乎每顆 entity 還會用到下面幾項——都不是「另一套機制」，而是往 `AddEntityApi(opt => …)` 那個 `opt` 上掛 hook，或在權限上補白名單。**先在這裡認得它存在、抓對掛點**，深寫照各自的 route。
+
+### 後端：寫入前驗證（查重等）
+
+DB 才驗得了的規則（唯一性、跨表關聯、業務規則）掛 `OnValidate`；純格式（必填 / 長度）留前端 reactive form。唯一性有內建一行掛法（自動掛 Post+Put）：
+
+```csharp
+api = moduleBuilder.AddEntityApi<long, Invoice>(opt =>
+{
+    opt.UniqueValidation(u => u.AddProperty(x => x.No));     // No 不可重複；複合鍵就連續 AddProperty
+});
+```
+
+刪除前擋關聯用 `opt.ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`。錯誤怎麼產生、i18n、自訂 validator → [core/validation-errors](../core/validation-errors.md)。
+
+### 後端：生命週期副作用（通知 / 稽核）
+
+新增 / 更新後做後續處理掛 `On{X}ed`；**一定要跑（含驗證失敗也跑）的橫切工作（log / 稽核）掛 `OnAfterTransaction`**：
+
+```csharp
+opt.ConfigPostApi(x => x.OnCreated(c => c.Pipe((INotifier n, Invoice e) => n.Notify(e))));
+```
+
+掛點全表（`OnCreating/OnCreated/OnUpdated/OnQueryed…`）、交易邊界、`UseDefaultSave(false)` → [core/entity-api](../core/entity-api.md)；pipe 怎麼寫 + DI 注入 → [core/pipe](../core/pipe.md)。
+
+### 後端：列表要帶關聯欄位（$expand 白名單）
+
+`$expand` 預設**全擋**。列表要顯示建立者、或某導覽屬性的欄位，前端 OData 要 `$expand=…`，後端得在權限上開白名單：
+
+```csharp
+moduleBuilder.AddModuleFuncion("Sample", "Invoice", f =>
+    f.AddStandardApiRoles(api, ctx => ctx.View
+        .AddOdataPermission<Invoice>(o => o.AllowExpand(x => x.CreatedByUser))));
+```
+
+巢狀 / 嚴格前綴語意 → [core/permissions](../core/permissions.md)。
+
+### 不是標準增刪改查的動作 → 自訂端點
+
+結帳、簽核、排序、批次、回傳算出來的視圖——這些不該硬塞進 CRUD，用 **Flow API**（`AddPostFlowApi` / `AddGetFlowApi` / …）自組一條管線、單獨綁權限、前端用 `HttpClient` 打 `api/entity/<name>`。整套見 skill [platform-custom-api](platform-custom-api.md)、深 doc [core/flow-api](../core/flow-api.md)。
+
+---
+
 ## 對齊契約（最常出錯的地方）
 
 三條字串必須對上，錯一個就「按鈕消失 / 403 / 查不到」：

@@ -47,6 +47,25 @@ HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本
 
 ---
 
+## 洋蔥，不是開關
+
+平台是一顆洋蔥，不是一排開關：每個高階 API 都是用**低一階的公開 API** 組出來的，內建沒有特權——`AddEntityApi` 的本體就是 `GetRequestModel → RunValidation → CreateData → Ok` 這條用公開組件串起來的 pipeline，pager 只是一個註冊了 skip/take 的查詢 plugin，default buttons 走的擴充點跟你能用的一模一樣。
+
+所以「最高階的不合用」**永遠不等於**「只能整個自幹」。不要看到一個開關關掉就重寫整層——**往下剝一層，換掉你需要的那一小塊，其餘照用**：
+
+| 情境 | 別這樣 | 剝這一層 |
+|---|---|---|
+| CRUD 某一步要插邏輯 | 重寫整個 endpoint | `ConfigXxxApi` 掛 hook（`OnCreating` / `OnQueryed`…）→ [entity-api](core/entity-api.md) |
+| 內建存檔不合用 | 繞過平台直寫 `DbContext` | `UseDefaultSave(false)` 只換存檔步，交易 / 驗證 / hook 照舊 |
+| 端點形狀完全不同 | 自己生一個 Controller | `AddXxxFlowApi` 自組管線，仍在權限 / 交易框架內 → [flow-api](core/flow-api.md) |
+| 查詢要加非標準條件 | 前端自己打 HTTP | `addQuery` plugin / 自訂 `hcsDataGridQuery` |
+| 預設按鈕多了 / 少了 | 整列自己刻 | `showEdit` / `showDelete` 逐顆開關、`HCS_LIST_SERVICE` 攔截 |
+| 整頁不合用 | fork 模板自己渲染 | `createRoute` component override（路由 / 權限 / i18n 保留） |
+
+鐵則：**永遠只客製最小的那一塊。** 繞過平台直接打 DB / 打 HTTP，等於連帶繞過租戶過濾、權限與稽核——那不是客製，是把平台關掉（`ITable` 這個 footgun 見 [data-pipes](core/data-pipes.md)）。
+
+---
+
 ## 沿革
 
 平台始於 **2018-05**(1.0;核心以 `netstandard2.0` class library 起家),隨 .NET 大版本逐次升級。下表時間取自核心專案 `TargetFramework` 的變更時點:
@@ -77,7 +96,7 @@ HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本
 
 - Entity → DB 對應(`AddModel<>`)
 - 五支 RESTful API:`AddEntityApi<TKey, TEntity>` 自動產生 Get / Query / Post / Put / Delete(**不寫 Controller**,控制器在執行期動態產生;CRUD 管線、生命週期 hook、交易範圍見 [entity-api](core/entity-api.md))
-- 自訂端點:`AddQueryFlowApi<T>` / `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi`(不綁 entity 也能產出端點)
+- 自訂端點：`AddQueryFlowApi<T>` / `AddGetFlowApi` / `AddPostFlowApi` / `AddPutFlowApi`——不是標準增刪改查的動作（結帳、簽核、排序、自訂視圖）自組一條 pipeline，仍在權限 / 交易框架內（見 [flow-api](core/flow-api.md)）
 - 子集合處理:`SaveChildsFor(s => s.Items)` / `QueryChildFor(c => c.Items)`
 - 細粒度權限樹:`AddModuleFuncion` + `AddStandardApiRoles` + `AddPermission`
 - 公開端點:`moduleBuilder.Everyone.AddRole(api)`(不需登入)
@@ -86,7 +105,7 @@ HCS Platform 是「平台框架 + 可組裝模組系統」,不是業務系統本
 
 ### 2. Pipe 擴充點(參數自動 DI)
 
-所有切入點(`OnCreated` / `OnUpdated` / `OnDeleted` / `OnValidate` / `OnQueryed` / `OnGeted` / `OnKeyGeted`)都接受 `Pipe(...)`,**Pipe lambda 的參數會自動從 DI 注入**:
+主要切入點(前置 `OnCreating` / `OnUpdating` / `OnDeleting` / `OnKeySet`,後置 `OnCreated` / `OnUpdated` / `OnDeleted`,以及 `OnValidate` / `OnQueryed` / `OnGeted` / `OnKeyGeted`)都接受 `Pipe(...)`,**Pipe lambda 的參數會自動從 DI 注入**:
 
 ```csharp
 options.ConfigPostApi(x =>
@@ -110,7 +129,7 @@ options.ConfigPostApi(x =>
 
 ### 4. OData 查詢
 
-啟動時掃描 query entity 自動建 `EdmModel`。每個 entity 支援 `$filter / $select / $orderby / $expand`,但 expand 必須透過 `AddOdataPermission<T>(b => b.AllowExpand(...))` 白名單(預設拒絕,防關聯資料外洩)。
+啟動時收集所有 query entity 型別;查詢時走 `OdataQueryLite` 引擎以反射處理 `$filter / $select / $orderby / $expand`(已取代舊的 `EdmModel` 路線)。expand 必須透過 `AddOdataPermission<T>(b => b.AllowExpand(...))` 白名單放行(預設拒絕,防關聯資料外洩)。
 
 ### 5. 驗證與授權
 
@@ -126,7 +145,7 @@ options.ConfigPostApi(x =>
 
 ### 7. 其他基礎建設
 
-- 加密 payload middleware(前 4 byte 為 key,前端可選擇加密)。
+- API endpoint 混淆 middleware:前端可選擇把請求 URL(path / query)編碼,讓實際呼叫的 endpoint 不以明文出現(目的是混淆 API 介面、增加爬取/掃描成本,**非** request body 的資料加密)。
 - 檔案上傳 / 儲存:抽象 `IFileStorage`,內建本機磁碟與 **Azure Blob** 兩種後端(`UseLocalFileStroage` / `UseAzureBlobStorage`),含確認 / 孤兒清理生命週期(見 [core/file-upload.md](core/file-upload.md))。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
 - 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、快取過期時只讓單一請求重建以免一窩蜂打後端(cache stampede,`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
@@ -179,7 +198,7 @@ options.ConfigPostApi(x =>
 - **form**:`extends BaseFormComponent<T>`,`super(service, T)`,用 reactive form(含 `Validators`)定義編輯欄位;template 排表單。
 - **route**:在 Angular `Route[]` 註冊 list / `new` / `:id` / `:id/edit` 對應元件。
 
-**資料抓取、分頁、查詢條件轉 OData、存檔、驗證錯誤顯示**由基底類別與 `DataSourceFactory.getDataSource(Entity)` 處理——**使用端不需自己寫 API 呼叫**,只要把 datasource 指向 entity model(對應後端 `/api/odata/<Entity>`)。
+**資料抓取、分頁、查詢條件轉 OData、存檔、驗證錯誤顯示**由基底類別與 `DataSourceFactory.getDataSource(Entity)` 處理——**使用端不需自己寫 API 呼叫**,只要把 datasource 指向 entity model(對應後端 `/api/entity/<entity key>`)。
 
 完整前端 SDK 說明(library 清單、7 個 SDK 慣例、`@hcs/core` 內容、新增功能步驟)見 [frontend.md](frontend.md)。各能力的深入文件:[表單](frontend/form.md)、[列表 / 資料表格](frontend/list.md)、[輸入元件](frontend/controls.md)、[外殼 / 版面](frontend/shell.md)、[登入(前端)](frontend/login.md)。
 
@@ -198,10 +217,10 @@ options.ConfigPostApi(x =>
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | [multi-tenant](core/multi-tenant.md) |
 | `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[multi-tenant](core/multi-tenant.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
-| `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>`、`IScopedDbContext`、查詢 context 等) | [data-pipes](core/data-pipes.md) |
+| `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>` / `Table<T>` 與其擴充) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | [approval-flow](modules/approval-flow.md) |
 
-### Platform Modules(可選,各對應一個 `AddXxxModule()`)
+### Platform Modules(可選,各對應一個 `AddXxxModule()`;2FA 例外為 `AddTwoFactorAuthentication`)
 
 | 模組 | 用途 | Doc |
 |---|---|---|
@@ -280,8 +299,10 @@ Angular 17 SPA + ng library 套件。
 
 操作型 step-by-step 指南放在 [`skills/`](skills/)。每篇同時是人讀的 how-to,也是可被 LLM agent 觸發的 skill(帶 frontmatter、骨架自洽);骨架取自實際編譯 + 跑通的最小 app。
 
+- [能力總覽與文件索引](skills/platform-overview.md) — 不知道從哪起、或「平台怎麼做 X」先看這篇:內建能力清單 + 該往哪篇 doc 深入
 - [建立一個新專案](skills/platform-create-project.md) — 從零起後端 host + 前端 app + 第一個 admin + dev loop + DB schema 管理
 - [建立一個模組](skills/platform-create-module.md) — entity 的容器:後端 `IPlatformModule` + 前端 feature/provider module + 選單,接進 app
-- [往模組加一顆 Entity](skills/platform-add-entity.md) — 後端 CRUD API + 前端列表/表單頁,端到端(可重複)
+- [往模組加一顆 Entity](skills/platform-add-entity.md) — 後端 CRUD API + 前端列表/表單頁,端到端(可重複),含常見客製
+- [加一支自訂端點](skills/platform-custom-api.md) — 非標準 CRUD 的動作(結帳/簽核/排序/批次/視圖):Flow API 自組管線
 
 各能力的概念與 gotcha 見上面[平台能力](#平台能力) / [前端](#前端) / [模組開發](#模組開發) 各篇。
