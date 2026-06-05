@@ -20,11 +20,16 @@ var sortApi = moduleBuilder.AddPostFlowApi<long, Invoice>("Invoice.Sort", b =>
 - **`name`** 是這支端點的 key,直接決定**前端 URL = `api/entity/<name>`**(見下「前端呼叫」)。慣例用 `功能.動作`,如 `"Invoice.Sort"`、`"Order.Confirm"`。
 - **`flowBuilder`** 型別是 `DIPipeBuilder<HttpRequest, HttpRequest, IActionResult>`:給你一條從 `HttpRequest` 起步的 pipe,你疊步驟、**最後收尾成 `IActionResult`**(用 `.Ok()` / `.OkOrNotFound()` 等)。
 - **回傳 `IRoleToken`**:這個 token **必須**綁進某個權限(見下「權限綁定」),否則沒人叫得動。
-- 兩個選用參數 `preTransBuilder` / `afterTransBuilder` = 交易前 / 交易後 pipe(對應 entity API 的 `OnBeforeTransaction` / `OnAfterTransaction`,語意見 [entity-api](entity-api.md) 交易章)。
+- 兩個選用參數 `preTransBuilder` / `afterTransBuilder` = 交易前 / 交易後 pipe(型別 `DIPipeBuilder<HttpRequest, HttpRequest, object>`,對應 entity API 的 `OnBeforeTransaction` / `OnAfterTransaction`,語意見 [entity-api](entity-api.md) 交易章)。**它們的 pipe 必須以 `object` 收尾**:這兩段不負責回 HTTP response(那是 `flowBuilder` 收尾成 `IActionResult` 的事),而 `DIPipe<TIn,TOut>` 沒有 void 輸出型別,所以「輸出丟掉」的 hook 用 `object` 當載體——最後一步得產出個 object(值被忽略,如結尾 `.Pipe(x => (object)x)`)。entity API 的 `OnAfterTransaction` 框架會幫你補這個 cast,**raw FlowApi 不補,得自己收**(實測:結尾停在 `DIPipe<HttpRequest, Order>` 編譯不過)。
 
 `Post / Put / Delete` 整條跑在單一 DB 交易內(任一步 throw → rollback);`Get` / `Query` 唯讀、不開交易。要在 pipe 中改交易行為(關掉自動交易自管、或調隔離級別)用 `.SetAutoTransaction(enable, isolationLevel)` / `.SetAutoTransactionIsolationLevel(...)`。交易語意與 entity API 完全一致,見 [entity-api](entity-api.md)。
 
-> **副作用放哪 = 要不要被 rollback 牽連。** 串在主 `flowBuilder` 內的步驟跑在交易內——把寄送通知接在存檔之後,通知一拋例外就 rollback 整筆寫入、且只在驗證通過時跑。**一定要跑(log / 稽核)或不該被 rollback 連帶撤掉(寄送通知)的副作用,改掛 `afterTransBuilder`**(交易外、commit 後跑、含驗證 400 也跑)。對應 entity API 的 `OnBeforeTransaction` / `OnAfterTransaction`,語意見 [entity-api](entity-api.md)。
+> **副作用放哪。** 串在主 `flowBuilder` 內的步驟跑在交易內、**拿得到剛處理的 entity**,但一拋例外就 rollback、且只在驗證通過時跑。**通知 / 推送這類副作用非掛 `afterTransBuilder` 不可**:pipe 還在交易內時你**不知道後續會不會 rollback**,要「確定 commit 成功才通知」就只能等交易外(否則可能通知了之後被 rollback 掉、不存在的資料)。次要好處:長 async I/O(SignalR、寄信、call 外部 API)不卡在交易內 hold 著 DB 鎖。`afterTransBuilder` 在**交易外、commit 後**跑,但它的 pipe **從 `HttpRequest` 起步、不直接給你那筆 entity**。afterTrans 要拿 entity 兩條路:
+>
+> - **`GetRequestModel<T>()`** 重新反序列化 request body——拿到**送進來的形狀**(新增時還沒有 DB 配的 `Id` / audit)。
+> - 主管線(交易內)`.RequestData().Set("k")` → afterTrans `.RequestData().GetIfExists<T>("k")`——把**存好的 entity**(含 `Id` / audit)帶過去;需先 `Services.AddRequestData()`(平台預設不註冊)+ 套件 `Hcs.Extensions.RequestData`。
+>
+> **何時跑 / null-guard:** afterTrans 只在 **commit 成功後**跑——主管線拋例外 → rollback **且 afterTrans 不跑**(不會拿到被 rollback 的 entity);但**驗證 400 不是例外**、交易照 commit、afterTrans **照跑**,此時 `pass` 分支沒執行,`GetIfExists` 回 **`null`**(`GetIfExists` 本就回 `default`,要 null-guard)。對應 entity API 的 `OnBeforeTransaction` / `OnAfterTransaction`,語意見 [entity-api](entity-api.md)。
 
 ---
 

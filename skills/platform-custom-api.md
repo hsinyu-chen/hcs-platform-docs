@@ -34,13 +34,27 @@ var confirmApi = moduleBuilder.AddPostFlowApi<long, Order>("Order.Confirm", b =>
      .Pipe(OrderPipes.CalculateTotal)          // 你的業務步驟
      .RunValidation(                            // 驗證閘門：有錯 → 400，後段不跑
          v => v.Pipe(OrderPipes.EnsureConfirmable),
-         pass => pass
-            .UpdateData()                       // 走 ITable<T>：自動套租戶過濾 + audit
-            .Ok()),                             // → 200 + 回傳值
-     afterTransBuilder: a => a.Pipe(OrderPipes.SendNotice));  // 通知掛交易外：不被 rollback 連帶撤掉
+         pass => pass.UpdateData().Ok()),       // 交易內：走 ITable<T>（自動租戶過濾 + audit）存檔
+     afterTransBuilder: a => a.GetRequestModel<Order>()   // 交易外、commit 後：重 parse 拿回 Order（confirm 既有單，body 帶 Id）
+         .Pipe(OrderPipes.SendNotice));         // 外部推送擺這：不 hold 鎖、也不會推到 rollback 掉的資料
 ```
 
-> **副作用落點是個 footgun。** 串在主管線(`pass` 分支)內的步驟跑在**交易內**——把 `SendNotice` 接在 `UpdateData()` 後面，通知一失敗就 rollback 整筆結帳、且只在驗證通過時跑。**一定要跑(log / 稽核)或不該被 rollback 撤掉(寄送通知)的副作用，掛第三參 `afterTransBuilder`**(交易外、commit 後、含驗證 400 也跑)。`AddXxxFlowApi(name, flowBuilder, preTransBuilder?, afterTransBuilder?)` 的後兩個選用參數就是交易前 / 後 hook。要改交易隔離級別用 `.SetAutoTransaction(enable, isolationLevel)`。
+> **副作用落點是個 footgun。** 主管線(`pass` 分支)內的步驟跑在**交易內**、拿得到剛處理的 entity——但任一步 throw 會 rollback、且只在驗證通過時跑。第四參 `afterTransBuilder` 在**交易外、commit 後**跑(**含驗證 400 也跑**)。**通知 / 推送這類副作用非放這裡不可**:pipe 還在交易內時你**不知道後續會不會 rollback**——要「**確定真的存進去了才通知**」就只能等 commit 之後(在交易內通知,萬一 rollback 就通知了不存在的資料,接收端 re-fetch 也讀不到未 commit 的列)。次要好處:長 async I/O(SignalR 推送、寄信、call 外部 API)不會卡在交易內 hold 著 DB 鎖、拖垮並行。一定要跑的 log / 稽核也放這。它的 pipe 從 `HttpRequest` 起步、**不直接給你那筆 entity**(實測:在 afterTrans 寫 `.Pipe((Order o) => …)` 編譯就不過,框架把 `Order` 當要注入的服務)。afterTrans 要拿 entity 有兩條路:
+>
+> - **`GetRequestModel<T>()`** 重新反序列化 request body——最簡單,但拿到的是**送進來的形狀**(新增時還沒有 DB 配的 `Id` / audit)。
+> - 主管線(交易內)`.RequestData().Set("k")` → afterTrans `.RequestData().GetIfExists<T>("k")`——把**存好的 entity**(含 `Id` / audit)跨交易邊界帶過去;需先 `moduleBuilder.Services.AddRequestData()`(平台預設不註冊)+ 套件 `Hcs.Extensions.RequestData`。
+>
+> ```csharp
+> // (a) afterTrans 重 parse request body：
+> afterTransBuilder: a => a.GetRequestModel<Order>().Pipe(OrderPipes.AuditConfirm)
+> // (b) 交易內 stash 存好的 entity、afterTrans 取回（拿得到 Id/audit）：
+> pass => pass.UpdateData().RequestData().Set("saved").Ok()      // ← 主管線
+> afterTransBuilder: a => a.RequestData().GetIfExists<Order>("saved").Pipe(OrderPipes.PushNotice)
+> ```
+>
+> **(b) 的 null-guard:** afterTrans 只在 **commit 成功後**跑(主管線拋例外 → rollback **且 afterTrans 不跑**,所以不會拿到被 rollback 的 entity)。但**驗證 400 不是例外**(交易照 commit),此時 `pass` 分支沒跑 → `Set` 沒寫 → `GetIfExists` 回 **`null`**,afterTrans 的 pipe **必須 null-guard**(實測 400 時 afterTrans 收到 null)。
+>
+> **`pre` / `afterTransBuilder` 的 pipe 要以 `object` 收尾**——它們不回 HTTP response、`DIPipe` 又沒有 void 輸出型別,結尾補個 `.Pipe(x => (object)x)` 即可(raw FlowApi 不像 entity hook 會自動補,結尾停在 entity 型別會編譯不過)。`AddXxxFlowApi(name, flowBuilder, preTransBuilder?, afterTransBuilder?)`;改交易隔離級別用 `.SetAutoTransaction(enable, isolationLevel)`。
 
 **常用組件**（`AddXxxFlowApi` 入口與 `SaveChildsFor` / `QueryChildFor` / `PipeIfRole` 在 `Hcs.Platform.Data`；取輸入 / CRUD / OData / 驗證 / 收尾組件在 `Hcs.Platform.Flow`——兩個 `using` 通常都要；`SwitchCase` 在 `namespace System`，免額外 `using`）：
 
