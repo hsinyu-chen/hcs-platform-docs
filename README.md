@@ -265,7 +265,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Extensions.Collections` | 字典擴充(`AddIfNotExists` / `AddOrUpdate`) | — |
 | `Hcs.Extensions.DependencyInjection` | 命名服務工廠(按名稱解析多實作) | — |
 | `Hcs.Extensions.EntityFrameworkCore` | DbSet / Queryable 擴充(主鍵篩選等) | — |
-| `Hcs.Extensions.MemoryCache` | `GetOrCreateAtomicAsync` 防快取驚群 | — |
+| `Hcs.Extensions.MemoryCache` | `GetOrCreateAtomicAsync` 防 cache stampede | — |
 | `Hcs.Extensions.Message` / `.Email` / `.Android` / `.Ios` / `.Mitake` | 多通道發訊抽象 + SMTP / FCM / APNs / 三竹簡訊實作 | — |
 | `Hcs.Extensions.OdataClient` | OData 查詢 client(LINQ → OData URL) | — |
 | `Hcs.Extensions.RequestData` | HTTP request 資料字典 | — |
