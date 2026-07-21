@@ -9,6 +9,8 @@ description: 往一個既有的 HCS Platform 模組加一顆 entity——後端 
 
 往一個**既有模組**加一顆 entity，從零到「列表能查、表單能增刪改」。**前置**：app 見 [platform-create-project](platform-create-project.md)；module（容器）見 [platform-create-module](platform-create-module.md)。本篇假設模組 `Sample` 已存在（後端 `SampleModuleConfig` / `SampleModelConfig`，前端 `SampleModule` / `SampleMenu` / `sample.routes.ts`）。
 
+> **快速路徑**：標準形狀（本篇後端 1–3 + 前端 1–4 + migration）可以用 `npx @hcs/create-hcs-entity <定義檔.json>` 一次生成——欄位定義寫一份 JSON，工具產檔、插註冊、跑 migration，收尾只剩重啟 + `--updaterole` + 重新登入。客製（hook、`$expand` 白名單、自訂端點）仍照本篇手動加。
+
 以一顆 `Invoice`（entity 全名 `Sample.Models.Invoice`、功能碼 `Sample.Invoice`）為例。每加一顆 entity 重跑本流程，把名字換掉。
 
 ---
@@ -64,7 +66,18 @@ moduleBuilder.AddModuleFuncion("Sample", "Invoice",       // 拼字就是 Funcio
 
 `AddEntityApi<long, Invoice>` 一行就長出 Get/Query/Post/Put/Delete 五個端點（OData 查詢、CRUD 管線、交易範圍全內建）。
 
-> 加了新功能碼後，從 **localhost** 打一次 `GET /api/console/updaterole`，把新權限灌給既有 admin 群組（否則登入後看不到這顆 entity 的頁/按鈕）。
+### 4. DB：補 migration
+
+**既有 DB 不會自動長出新表**（平台啟動只在資料庫不存在時建全套），所以每加一顆 entity 都要（先停掉運行中的 host）：
+
+```bash
+dotnet ef migrations add Add<Entity>
+dotnet ef database update
+```
+
+migration 前置儀式與 baseline 陷阱見 [platform-create-project](platform-create-project.md) 的「DB schema 演進」節。
+
+> 收尾三步：重啟 host → 從 **localhost** 打一次 `GET /api/console/updaterole` 把新權限灌給既有 admin 群組（否則登入後看不到這顆 entity 的頁/按鈕）→ 前端**重新登入**（權限是登入時載的，不重登選單不會出現）。
 
 **深度**：管線/hook/交易語意 → [core/entity-api](../core/entity-api.md)；Pipe lambda 寫法 → [core/pipe](../core/pipe.md)；權限樹 → [core/permissions](../core/permissions.md)。
 
@@ -276,7 +289,8 @@ moduleBuilder.AddModuleFuncion("Sample", "Invoice", f =>
 - ❌ **後端不要寫 Controller / 繼承 ControllerBase / 寫 DTO + AutoMapper**——控制器執行期動態生成。
 - ❌ **繼承 `BaseOrganizedModel` 就以為有租戶隔離**——少了 `, IOrganized` 介面，有 `OrgId` 欄位也不會被過濾。
 - ❌ **前端不要手刻 / codegen entity 的 raw API URL**——`@ApiEntry` + SDK datasource 會自己拼（含 `$select`/`$filter`/auth/密碼 hash/加密），consumer 一律走 SDK 元件、不直接打 raw API。
-- ❌ **加了功能碼忘了 `updaterole`**——admin 群組拿不到新權限，頁面/按鈕會被權限 gate 藏起來。
+- ❌ **加了 entity 忘了 migration**——既有 DB 不會自動長新表，該 entity 一查就 500 `Invalid object name '<Entity>'`。
+- ❌ **加了功能碼忘了 `updaterole` 或忘了重新登入**——admin 群組拿不到新權限（或舊 session 還載著舊權限清單），頁面/按鈕會被權限 gate 藏起來。
 
 ---
 

@@ -104,24 +104,36 @@ app.Run();
 
 `UseHcsPlatform` 啟動時在 `wwwroot` 掛靜態檔 provider；**沒有這資料夾 app 一啟動就 `DirectoryNotFoundException` 崩**。`dotnet new web` 不帶它——手動建一個（裡面可空，放個 placeholder `index.html` 即可）。production 時前端 build 的產物會放進這裡。
 
-> ⚠️ **DB schema 啟動時自動同步**：平台在啟動時**動態組裝** model（base models + 你 `AddModel` 的對應），第一次啟動 `CREATE DATABASE` + 建所有表 + seed，之後每次啟動補缺的表。所以**不寫 migration 也能跑起來**——ConnectionString 指對一個 SQL 實例即可，看到 log「Platform initialized / System Ready」即成功。schema 要演進、帶上 prod，見下節。
+> ⚠️ **DB schema 只在「資料庫不存在」時自動建**：平台啟動時**動態組裝** model（base models + 你 `AddModel` 的對應），若資料庫不存在就 `CREATE DATABASE` + 建所有表 + seed（`EnsureCreated` 語意）。所以**第一次跑起來不用寫 migration**——ConnectionString 指對一個 SQL 實例即可，看到 log「Platform initialized / System Ready」即成功。但**資料庫已存在時，啟動不做任何 schema 動作——之後新增的 entity 不會自動長出資料表**（症狀：該 entity 的查詢 500 `Invalid object name '<Entity>'`）。schema 要演進（含 dev 期加 entity）見下節。
 
 ### DB schema 演進與上 prod
 
-dev 期 schema 跟著 app 啟動自動同步（平台只建**缺**的表）。要把 schema 變更帶上 prod，兩條路：
+DB 建出來之後，每一次 schema 變更（新 entity、加欄位）都要走下面其中一條路：
 
 **正常路線：EF migration（推薦）。** 平台的 `DbContext` 在套件裡、model 啟動時動態組裝，但 `dotnet ef` 能透過 host 的 DI 找到它、design-time 建出完整 model——**不需另立 DbContext**。儀式兩樣：
 
 1. host 加 `Microsoft.EntityFrameworkCore.Design` 套件。
 2. `ConfigDbOptions` 的 `UseSqlServer(conn, b => b.MigrationsAssembly("<YourHost>"))` 加 `.MigrationsAssembly(...)`（`DbContext` 在套件、migration 檔要落進你的專案）。
 
-然後：
+然後每次 schema 變更：
 
 - `dotnet ef migrations add <Name>` — 產 migration（捕捉 base + 你的 entity 完整 schema）。
+- `dotnet ef database update` — 套用到 dev DB。
 - `dotnet ef migrations script <from> <to>` — 產版本化 SQL diff 上 prod。
-- `dotnet ef database update`（可選）— 直接套用。
 
-**legacy 路線：砍掉重建 + schema diff 工具。** 舊流程：改 schema 時砍掉 dev DB 讓平台重建，再用 SQL schema-compare 工具（如 SSDT）對 prod 產 diff。能用，但砍掉重建不方便、diff 非版本化。新專案建議走 migration。
+**⚠️ EF migrate 注意事項：**
+
+- **先停掉運行中的 host 再跑 `dotnet ef`**——`dotnet ef` 會先 build，運行中的 host 鎖住組建輸出會直接 build 失敗。
+- **baseline 陷阱**：若 dev DB 是平台自動建的（先有 DB、後補 migration），`__EFMigrationsHistory` 裡**沒有** Init migration 的紀錄，`database update` 會想從 Init 整套重跑而撞表（`There is already an object named 'Organization'`）。解法是把 Init 手動補記進 history 當 baseline，之後 update 就只套新的 migration：
+
+  ```sql
+  INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+  VALUES ('<InitMigrationId>', '<EF 版本>');   -- MigrationId = Migrations/ 底下 Init 檔名（不含 .cs）
+  ```
+
+- 加了 entity 之後記得整套收尾：套完 migration → 重啟 host → localhost 打 `GET /api/console/updaterole` 灌權限 → 前端重新登入。
+
+**legacy 路線：砍掉重建 + schema diff 工具。** 舊流程：改 schema 時砍掉 dev DB 讓平台重建，再用 SQL schema-compare 工具（如 SSDT）對 prod 產 diff。能用，但砍掉重建不方便、diff 非版本化、dev 資料全失。新專案建議走 migration。
 
 ---
 

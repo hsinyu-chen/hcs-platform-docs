@@ -27,7 +27,7 @@ public class SampleModelConfig : IModelConfig
 {
     public void BuildModel(ModelBuilder modelBuilder)
     {
-        // 每加一顆 entity，往這裡加一行 e.Entity<X>(e => e.SetupBaseModel());
+        // hcs:model-config —— 每顆 entity 的 e.Entity<X>(e => e.SetupBaseModel()) 加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
     }
     public void BuildSeedData(DbContext context) { }
 }
@@ -47,7 +47,7 @@ public class SampleModuleConfig : IPlatformModule
     public void Build(IPlatformModuleBuilder moduleBuilder)
     {
         moduleBuilder.AddModel<SampleModelConfig>();   // 整個模組一個 ModelConfig
-        // 每加一顆 entity，往這裡加 AddEntityApi<...>(...) + AddModuleFuncion(...)
+        // hcs:entity-api —— 每顆 entity 的 AddEntityApi<...> + AddModuleFuncion(...) 加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
     }
 }
 ```
@@ -74,7 +74,7 @@ b.AddModule<SampleModuleConfig>();
 import { Route } from '@angular/router';
 
 export const routes: Route[] = [
-  // 每加一顆 entity，往這裡加它的 5 條 route（list / new / new:copy / :id / :id/edit）
+  // hcs:routes —— 每顆 entity 的 5 條 route（list / new / new:copy / :id / :id/edit）加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
 ];
 ```
 
@@ -92,7 +92,7 @@ import { routes } from './sample.routes';
 
 @NgModule({
   declarations: [
-    // 每加一顆 entity，往這裡加它的 list + form 元件
+    // hcs:declarations —— 每顆 entity 的 list + form 元件加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
   ],
   imports: [CommonModule, ReactiveFormsModule, HcsComponentsModule, RouterModule.forChild(routes)],
 })
@@ -113,7 +113,7 @@ export class SampleMenu extends MenuItemProvider {
     return [
       // MenuItem(title, icon, route, click, children, visible)
       new MenuItem('Sample', 'receipt_long', null, null, [
-        // 每加一顆 entity，往這 children 加一個 MenuItem（含 permission gate）
+        // hcs:menu-items —— 每顆 entity 的 MenuItem（含 permission gate）加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
       ]),
     ];
   }
