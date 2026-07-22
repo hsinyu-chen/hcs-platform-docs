@@ -114,15 +114,66 @@ openEdit(id: number) {
 
 ### `hcs-reference-input` — 參照選擇(外鍵)
 
-挑另一個 entity 當外鍵。值是被選 entity 的主鍵;`(entityChange)` 另外吐出整個被選 entity。要給 `[pickerSetting]`(彈窗挑選來源),可選 `[searchSetting]`(自動完成搜尋)。
+挑另一個 entity 當外鍵。值是被選 entity 的主鍵;`(entityChange)` 另外吐出整個被選 entity。`[pickerSetting]` 給彈窗挑選、`[searchSetting]` 給打字搜尋(autocomplete)——**有無 searchSetting 決定 input 能否打字**:沒給就是唯讀、只能按放大鏡開彈窗。
 
 ```html
-<hcs-reference-input formControlName="CustomerId" [pickerSetting]="customerPicker" required>
+<!-- picker + autocomplete;<label> 投影當欄位標題 -->
+<hcs-reference-input formControlName="CustomerId" [settings]="ref.customer" [autocompleteSearch]="true">
   <label>客戶</label>
 </hcs-reference-input>
 ```
 
-其他屬性:`[settings]="{picker, search}"`(一次給兩個)、`autocompleteSearch`(預設 `false`;搜尋只剩一筆時自動帶入)、`showClearButton`(預設 `true`)、`searchDelay`(預設 `500` ms)。
+屬性:`[pickerSetting]` / `[searchSetting]` 分開綁,或 `[settings]="{picker, search}"` 合併綁(等價);`autocompleteSearch`(預設 `false`;搜尋結果只剩一筆時自動選定,連 dropdown 都不用點)、`showClearButton`(預設 `true`)、`required`、`[visible]`、`(entityChange)`。`searchDelay` 目前 binding 不生效,視為固定 500ms。
+
+#### Setting 組法(集中一個 `@Injectable` service)
+
+型別從 `@hcs/core/hcs-components` 匯入、datasource 一律從 `@hcs/core/hcs-lib` **根**匯入(深層路徑不是 entry point):
+
+```typescript
+import { Injectable } from '@angular/core';
+import { IReferencePickerSettings, IReferenceSearchSettings } from '@hcs/core/hcs-components';
+import { DataSourceFactory } from '@hcs/core/hcs-lib';
+import { Customer } from './customer.model';
+
+@Injectable({ providedIn: 'any' })
+export class MyReferenceSettings {
+  customer: { picker: IReferencePickerSettings, search: IReferenceSearchSettings };
+
+  constructor(dsFactory: DataSourceFactory) {
+    // datasource 可先 .where()/.select() 鎖範圍瘦身;picker 與 search 共用同一實例安全(內部查詢都 clone)
+    const ds = dsFactory.getDataSource(Customer);
+    this.customer = {
+      picker: {
+        displayField: 'Name',            // 選定後顯示 entity[displayField];多欄組合改用 displayFormatter: e => `${e.No} ${e.Name}`
+        filters: [                       // 彈窗上方的查詢欄位列;name 過 translate(i18n key)
+          { field: 'No', operator: 'contains', name: 'models.MyApp.Customer.No' },
+        ],
+        columns: [                       // 彈窗 grid 欄位(必填)
+          { field: 'No', name: 'models.MyApp.Customer.No' },
+          { field: 'Name', name: 'models.MyApp.Customer.Name' },
+        ],
+        datasource: ds,                  // 必填;另有 multiple?(多選回 id 陣列)、sortState?、showCheck?
+      },
+      search: {
+        displayField: 'Name',
+        searchField: 'Name',             // 打字比對的欄位(必填)
+        serachMode: 'contains',          // 拼字 serachMode 是正式 API 既定名;省略一律 startswith
+        datasource: ds,
+      },
+    };
+  }
+}
+```
+
+component 注入為 `public ref: MyReferenceSettings`,template 綁 `ref.customer`。依執行期參數換範圍:重建 datasource、整組換掉 setting 物件參考即可。
+
+**要點與陷阱**:
+
+- **反查靠 `identityProperty`**:`writeValue(id)` 用 `datasource.identityProperty` 查回實體。`getDataSource(ModelClass)` 用平台 model 類別會自動從 `@ApiEntry` 帶入;給 API 字串路徑自組的要自己設定。
+- 組織/使用者/群組選擇器**不用自己組**:注入 `@hcs/basic` 的 `ReferencePickerSettings`,直接用 `ref.orgId`/`ref.orgIdSearch`、`ref.platformUserId(+Search)`、`ref.platformGroupId(+Search)`(picker 與 search 是分開兩個屬性)。
+- 列表查詢列同一元件掛 `hcsDataGridQuery operator="="` 即可餵 `hcs-data-grid` 條件,見 [list](list.md)。
+- **後端權限**:picker 打的是「被參照 entity」的 Get/Query——把它們追加進**本頁功能**的 View 權限(self-contained),使用者不用另拿被參照 entity 的權限,見 [core/permissions](../core/permissions.md) 的判準節。
+- 多選變體 `hcs-tag-reference`:`[refSettings]="{picker, search}"` + `[data]`(選定實體陣列,就地增刪並 emit `(change)`),另有 `layout`、`createNewDatasource`+`getNewModelFn`(查無時建新資料)。
 
 ### `hcs-child-panel` — 主檔明細(一對多)
 

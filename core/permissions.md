@@ -62,6 +62,33 @@ b.AddModuleFuncion("MyApp", "Invoice", f =>
 - 沒 `AddRole` 任何 API 的權限(如上面的 `ExportAll`)不會 gate 任何端點,只供前端 `hasPermission('ExportAll')` 控制 UI。
 - 也可往標準權限**追加** API:`f.AddStandardApiRoles(api, ctx => ctx.View.AddRole(extraQuery.Query))` 讓持有 View 的人也能用某支額外查詢。
 
+### 多支 API 怎麼分權限(判準)
+
+一個功能頁往往不只 entity 的五支 CRUD——還有 picker 查詢、報表、動作型 flow API。判準是「**這支 API 的授權該跟誰走**」:
+
+| 情境 | 做法 |
+|---|---|
+| 跨頁共用的 lookup(多個頁面都要的基礎資料查詢) | 掛 `moduleBuilder.Everyone`,不佔功能權限 |
+| **頁面專屬的輔助 API**(該頁的 picker 查詢、報表、檢查) | **追加進標準權限**——查詢類進 `View`、動作類進語意最近的 `Modify`/`Create`,讓「授了 View 整頁就能動」(self-contained) |
+| 要能單獨給/不給某群組的動作(下架、簽核、展延) | 開新 `AddPermission("X", p => p.AddRole(token))` |
+| 純 UI 旗標 / 資料範圍開關 | `AddPermission("X")` 不綁 role |
+
+```csharp
+// self-contained:Employee 頁的部門 picker 查詢跟著 Employee.View 走
+moduleBuilder.AddModuleFuncion("Hr", "Employee", f => f.AddStandardApiRoles(employeeApi, ctx =>
+{
+    ctx.View.AddRole(departmentApi.Get).AddRole(departmentApi.Query);
+    ctx.Modify.AddRole(sortToken);                 // 動作型 flow API 掛語意最近的標準權限
+}));
+
+// 跨頁共用 lookup:對所有登入者開放(可與 $expand 白名單混掛)
+moduleBuilder.Everyone.AddRole(codeLookup).AddOdataPermission<Department>(o => o.AllowExpand(x => x.Parent.Name));
+```
+
+語意邊界:追加進 `View` 的是「**資料讀取能力**」,不是頁面——持有 Employee.View 的人查得到部門資料(picker 正是靠這個),但部門自己的頁面入口仍由 `….Department.View` 的選單 gate 控制、寫入 API 也不會跟著開。
+
+> 舊寫法「`AddStandardApiRoles(api)` 之後另外 `AddPermission(StandardRoles.View, b => b.AddRole(...))` 同名二次宣告」也能動(授權端與群組同步端都按 Code 合併),但會產生重複的 permission builder——**追加一律用 ctx 第二參數**;鏈式 `AddPermission` 留給新 code 的自訂權限。
+
 ---
 
 ## 授權怎麼跑(執行模型)

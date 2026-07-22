@@ -85,6 +85,7 @@ moduleBuilder.AddModuleFuncion("Sample", "Order", f =>
 ```
 
 - token 沒綁進任何權限 → 所有人 403（連 admin `updaterole` 後也拿不到）。
+- **不一定要開新權限**：頁面專屬的輔助查詢傾向追加進該功能的標準權限（`AddStandardApiRoles(api, ctx => ctx.View.AddRole(token))`，self-contained）；只有「要能單獨給/不給某群組」的動作才開新 `AddPermission`。判準四情境 → [core/permissions](../core/permissions.md) 的「多支 API 怎麼分權限」。
 - 加了新權限，從 **localhost** 打一次 `GET /api/console/updaterole` 灌進 admin 群組。
 - 權限樹 / `AddPermission` / `AddRole` 細節 → [core/permissions](../core/permissions.md)。
 

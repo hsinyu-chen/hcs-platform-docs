@@ -240,7 +240,7 @@ api = moduleBuilder.AddEntityApi<long, Invoice>(opt =>
 });
 ```
 
-刪除前擋關聯用 `opt.ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`。錯誤怎麼產生、i18n、自訂 validator → [core/validation-errors](../core/validation-errors.md)。
+**會被其他 entity 參考(FK)且未設計自動關聯刪除的 entity,一律掛刪除擋關聯**:`opt.ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`——不掛的話刪除在用資料會直接撞 DB FK constraint 噴 SqlException,而不是友善的驗證訊息。錯誤怎麼產生、i18n、自訂 validator → [core/validation-errors](../core/validation-errors.md)。
 
 ### 後端：生命週期副作用（通知 / 稽核）
 
