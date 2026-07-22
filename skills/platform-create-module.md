@@ -111,8 +111,8 @@ import { MenuItem, MenuItemProvider } from '@hcs/core/hcs-lib';
 export class SampleMenu extends MenuItemProvider {
   get(): MenuItem[] {
     return [
-      // MenuItem(title, icon, route, click, children, visible)
-      new MenuItem('Sample', 'receipt_long', null, null, [
+      // MenuItem(title, icon, route, click, children, visible)；title 就是 i18n key menu.*（走模組語系檔，不硬寫）
+      new MenuItem('menu.Sample', 'receipt_long', null, null, [
         // hcs:menu-items —— 每顆 entity 的 MenuItem（含 permission gate）加在這行上方（create-hcs-entity 的插入 anchor，保留原樣）
       ]),
     ];
@@ -120,22 +120,41 @@ export class SampleMenu extends MenuItemProvider {
 }
 ```
 
-### provider module（`forRoot` 只註冊 MENU_ITEMS，**不註冊路由**）
+### provider module（`forRoot` 註冊 MENU_ITEMS + I18N_INDEX，**不註冊路由**）
 
 `sample-provider.module.ts`：
 
 ```typescript
 import { ModuleWithProviders, NgModule } from '@angular/core';
-import { MENU_ITEMS } from '@hcs/core/hcs-lib';
+import { I18N_INDEX, MENU_ITEMS } from '@hcs/core/hcs-lib';
 import { SampleMenu } from './Menu';
 
 @NgModule()
 export class SampleProviderModule {
   static forRoot(): ModuleWithProviders<SampleProviderModule> {
-    return { ngModule: SampleProviderModule, providers: [{ provide: MENU_ITEMS, useClass: SampleMenu, multi: true }] };
+    return {
+      ngModule: SampleProviderModule,
+      providers: [
+        { provide: MENU_ITEMS, useClass: SampleMenu, multi: true },
+        { provide: I18N_INDEX, useValue: 'sample', multi: true },   // 模組語系檔目錄 assets/i18n/sample/
+      ],
+    };
   }
 }
 ```
+
+### 模組語系檔（`I18N_INDEX` 指向的字典目錄）
+
+選單 title 與之後每顆 entity 的欄名 / 功能名全走 i18n key（key 缺會顯示 raw key，連內建刪除擋關聯訊息也靠它），所以模組自帶一份字典目錄。建 `assets/i18n/sample/zh-tw.json` 與 `en-us.json` **兩本**（key 樹同構、語言各一），先放模組層 key、entity 之後往裡加（見 [platform-add-entity](platform-add-entity.md) 第 5 步）：
+
+```jsonc
+{
+  "menu":      { "Sample": "範例" },                 // 選單 title 用的 menu.* key
+  "functions": { "Sample": { "Category": "範例" } }  // 模組分類名（權限頁 / 匯出用）
+}
+```
+
+機制（主檔 vs 模組字典合併、`I18N_INDEX`、key 命名）見 [core/i18n-system](../core/i18n-system.md)。
 
 ### 接進 app
 

@@ -17,9 +17,26 @@
   | 共用 | `common.{item}` | `common.true` |
   | 列舉 | `enums.{EnumType}.{value}` | `enums.UserStatus.Active` |
   | 權限 | `permissions.{code}.{perm}` / `permissions.{perm}` | |
-  | Model 欄位 | `models.{ns}.{Model}.{Field}` | `models.BaseModels.PlatformUser.Name` |
+  | 選單 | `menu.{EntityClrName}` | `menu.Employee`(**逐字等於後端 CLR type name**,見下方註記) |
+  | Model 欄位(app 模組 entity) | `models.{Module}.{Entity}.{Field}` | `models.Sample.Employee.EmployeeNo`(**對齊功能碼與 `fieldI18nPrefix` 預設**,form 免覆寫) |
+  | Model 欄位(平台內建 / 跨模組共用) | `models.{ns}.{Model}.{Field}` | `models.BaseModels.PlatformUser.Name`(使用端 form 需明給 `fieldI18nPrefix` 覆寫) |
+  | 功能/匯出 | `functions.{FunctionCode}` | `functions.Sample.Employee` |
   | 元件/訊息 | `components.{feature}.{item}` | |
   | 驗證錯誤 | `errors.{key}` | `errors.required`(見 [validation-errors](validation-errors.md)) |
+
+---
+
+## ⚠️ 一定走語系檔:連「只出一種語言」的產品也不例外
+
+**即使產品只上一種語言,UI 字串也絕不在 template / 選單 / 設定物件硬寫,一律走語系檔。** 這不是為了未來多語系而已——平台的**內建訊息本身就靠字典 key 解析**,硬寫字串等於把這些訊息的欄位名 / 實體名開了個洞,使用者會直接看到 raw key:
+
+- **刪除擋關聯**:後端 `CheckAllRefForDelete` 擋下時組的訊息把實體名寫成 `menu.{EntityClrName}` 這個 key 丟給前端翻(如刪員工時的 `menu.Employee有關聯的資料(1)筆`)。所以**選單 key 必須逐字等於後端 CLR type name**——同一個 `menu.{ClrTypeName}` 同時餵選單標題與這條擋關聯訊息,對不上就顯示 `menu.Employee` 原字。
+- **欄位驗證錯誤的欄位名**:`hcs-form-page` 靠 `fieldI18nPrefix` 前綴 + 欄位名查 model 欄位 key 翻出人看得懂的欄位名。app 模組 entity 依慣例把 key 放 `models.{Module}.{Entity}.{Field}`(= 功能碼路徑),與 `fieldI18nPrefix` 預設對齊、免覆寫;只有借用平台共用字典(`models.BaseModels.*`)時才需覆寫前綴(見 [form](../frontend/form.md))。
+- **匯出檔名 / 權限頁**:靠 `functions.{FunctionCode}` 翻功能名。
+
+以上任一 key 缺,使用者看到的就是 raw key,不是漂亮字。
+
+**模組自有字串放模組字典、不塞主檔**:模組把自己的 `menu` / `functions` / `models` 節點放進 `assets/i18n/{index}/{lang}.json`,並在 `forRoot()` 用 `{ provide: I18N_INDEX, useValue: '{index}', multi: true }` 註冊自己的字典目錄(見下方 `I18N_INDEX`);主檔只放 app 層字串。兩本語言(`zh-tw` / `en-us`)的 key 樹要完全同構。
 
 ---
 

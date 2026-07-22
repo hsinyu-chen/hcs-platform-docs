@@ -135,18 +135,18 @@ export class InvoiceListComponent extends BaseListComponent<Invoice> {
 <hcs-list-page>
   <hcs-data-grid [data]="data" #grid [autoLoad]="true">
     <ng-container grid-head [formGroup]="filterForm">
-      <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label>單號</label></hcs-textbox-input>
-      <hcs-textbox-input formControlName="Title" hcsDataGridQuery operator="contains"><label>標題</label></hcs-textbox-input>
+      <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label translate>models.Sample.Invoice.No</label></hcs-textbox-input>
+      <hcs-textbox-input formControlName="Title" hcsDataGridQuery operator="contains"><label translate>models.Sample.Invoice.Title</label></hcs-textbox-input>
       <div class="buttons">
         <hcs-default-button-search-bar [grid]="grid" [filterForm]="filterForm"></hcs-default-button-search-bar>
       </div>
     </ng-container>
 
-    <ng-container *hcsDataGridColum="let value;let entity=entity;field:'No';export:true,name:'單號'">
+    <ng-container *hcsDataGridColum="let value;let entity=entity;field:'No';export:true,name:'models.Sample.Invoice.No'|translate">
       <a [routerLink]="[entity.Id]" queryParamsHandling="merge">{{ value }}</a>
     </ng-container>
-    <ng-container *hcsDataGridColum="let value;field:'Title';export:true,name:'標題'">{{ value }}</ng-container>
-    <ng-container *hcsDataGridColum="let value;align:'right';field:'Amount';export:true,name:'金額'">{{ value }}</ng-container>
+    <ng-container *hcsDataGridColum="let value;field:'Title';export:true,name:'models.Sample.Invoice.Title'|translate">{{ value }}</ng-container>
+    <ng-container *hcsDataGridColum="let value;align:'right';field:'Amount';export:true,name:'models.Sample.Invoice.Amount'|translate">{{ value }}</ng-container>
     <ng-container *hcsDataGridColum="let value;width:125;field:'Id';name:'';sortable:false">
       <hcs-default-button-list [data]="data" [key]="value"></hcs-default-button-list>
     </ng-container>
@@ -190,11 +190,12 @@ export class InvoiceFormComponent extends BaseFormComponent<Invoice> {
 `invoice-form.component.html`：
 
 ```html
+<!-- 欄位 key 走功能碼路徑 models.Sample.Invoice.*,與 fieldI18nPrefix 預設(models.{功能碼})對齊,所以不給 [fieldI18nPrefix] -->
 <hcs-form-page [formGroup]="formGroup" #fp [dataSource]="datasource">
   <hcs-form-row>
-    <hcs-textbox-input formControlName="No" required><label>單號</label></hcs-textbox-input>
-    <hcs-textbox-input formControlName="Title" required><label>標題</label></hcs-textbox-input>
-    <hcs-textbox-input type="number" formControlName="Amount" required><label>金額</label></hcs-textbox-input>
+    <hcs-textbox-input formControlName="No" required><label translate>models.Sample.Invoice.No</label></hcs-textbox-input>
+    <hcs-textbox-input formControlName="Title" required><label translate>models.Sample.Invoice.Title</label></hcs-textbox-input>
+    <hcs-textbox-input type="number" formControlName="Amount" required><label translate>models.Sample.Invoice.Amount</label></hcs-textbox-input>
   </hcs-form-row>
 </hcs-form-page>
 ```
@@ -217,9 +218,26 @@ export class InvoiceFormComponent extends BaseFormComponent<Invoice> {
 - **`Menu.ts`** 的 `Sample` children 加一個 MenuItem（含權限 gate）：
 
   ```typescript
-  new MenuItem('Invoice', null, ['/', 'sample', 'invoice'], null, null,
+  // 選單 title 就是 i18n key menu.{EntityClrName}——逐字等於後端 CLR type name(同一 key 也餵刪除擋關聯訊息)
+  new MenuItem('menu.Invoice', null, ['/', 'sample', 'invoice'], null, null,
     () => this.permission.hasPermission('Sample.Invoice.View')),
   ```
+
+### 5. 補模組語系檔
+
+前面 template / 選單全走 i18n key,key 缺使用者就看到 raw key(內建刪除擋關聯訊息也靠這些 key,見下「常見客製」),所以每加一顆 entity 要往模組字典補齊。**走快速路徑 `create-hcs-entity` 時這些字典條目會自動產(深合併進兩本語系檔,同 key 不覆蓋)**;手動加時,往 `assets/i18n/{module}/zh-tw.json` 與 `en-us.json` **兩本**(key 樹同構)加這顆的三類 key:
+
+```jsonc
+{
+  "menu":      { "Invoice": "發票" },                       // menu.{EntityClrName}(逐字等於 CLR type name)
+  "functions": { "Sample": { "Invoice": "發票" } },          // functions.{Module}.{Function}
+  "models":    { "Sample": { "Invoice": {                   // models.{Module}.{Entity}.*(= 功能碼路徑,對齊 fieldI18nPrefix 預設)
+    "$TableName": "發票", "No": "單號", "Title": "標題", "Amount": "金額"
+  } } }
+}
+```
+
+`$TableName` 每個 model 一定要有(實體名)。**模組還沒註冊過 I18N_INDEX**(第一顆 entity 時)就先在 provider module 的 `forRoot` providers 加 `{ provide: I18N_INDEX, useValue: '{module}', multi: true }`(import 自 `@hcs/core/hcs-lib`),字典目錄才會被載入合併;細節見 [core/i18n-system](../core/i18n-system.md)。
 
 **深度**：data-grid 全功能 → [frontend/list](../frontend/list.md)；表單生命週期/進階欄位 → [frontend/form](../frontend/form.md)。
 
@@ -240,7 +258,7 @@ api = moduleBuilder.AddEntityApi<long, Invoice>(opt =>
 });
 ```
 
-**會被其他 entity 參考(FK)且未設計自動關聯刪除的 entity,一律掛刪除擋關聯**:`opt.ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`——不掛的話刪除在用資料會直接撞 DB FK constraint 噴 SqlException,而不是友善的驗證訊息。錯誤怎麼產生、i18n、自訂 validator → [core/validation-errors](../core/validation-errors.md)。
+**會被其他 entity 參考(FK)且未設計自動關聯刪除的 entity,一律掛刪除擋關聯**:`opt.ConfigDeleteApi(d => d.OnValidate(v => v.CheckAllRefForDelete()))`——不掛的話刪除在用資料會直接撞 DB FK constraint 噴 SqlException,而不是友善的驗證訊息。**擋下時訊息用 `menu.{EntityClrName}` key 翻實體名**(如刪員工時的 `menu.Employee有關聯的資料(1)筆`),模組字典缺這個 key 使用者就看到 raw key——所以第 5 步的 `menu.*` 一定要補齊、且逐字等於 CLR type name。錯誤怎麼產生、i18n、自訂 validator → [core/validation-errors](../core/validation-errors.md)。
 
 ### 後端：生命週期副作用（通知 / 稽核）
 

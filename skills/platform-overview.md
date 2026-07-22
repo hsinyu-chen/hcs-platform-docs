@@ -79,6 +79,7 @@ description: HCS Platform（ASP.NET Core + Angular + OData + EF Core 的宣告�
 - 不手刻權限檢查 → `AddModuleFuncion` 宣告。
 - 不前端手刻 raw API URL → `@ApiEntry` + datasource（自訂端點才用 `HttpClient` 打 `api/entity/<name>`）。
 - 不直接碰 `localStorage` / `sessionStorage` → 走平台的使用者狀態儲存。
+- 不在 template / 選單硬寫 UI 字串（連只出一種語言的產品也不例外）→ 走語系檔；**內建錯誤訊息也靠字典 key**（刪除擋關聯用 `menu.{Entity}`、欄位驗證錯誤靠 `fieldI18nPrefix`），key 缺使用者直接看到 raw key，見 [core/i18n-system](../core/i18n-system.md)。
 - 第一次啟動不寫 EF migration 也能跑（DB 不存在時自動建全套）；但 **DB 建好之後加 entity 一律要 migration**（既有 DB 不會自動長新表），見 [platform-create-project](platform-create-project.md)。
 
 完整能力清單與專案地圖見文件庫首頁 [README](../README.md)。

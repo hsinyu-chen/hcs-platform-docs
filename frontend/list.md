@@ -45,10 +45,10 @@ export class InvoiceListComponent extends BaseListComponent<Invoice> {
   <hcs-data-grid [data]="data" #grid [autoLoad]="true">
     <!-- 查詢列:grid-head slot + filterForm -->
     <ng-container grid-head [formGroup]="filterForm">
-      <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label>單號</label></hcs-textbox-input>
+      <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label translate>models.Sales.Invoice.No</label></hcs-textbox-input>
       <hcs-select-input formControlName="Status" hcsDataGridQuery operator="=">
-        <label>狀態</label>
-        <hcs-option><span>全部</span></hcs-option>
+        <label translate>models.Sales.Invoice.Status</label>
+        <hcs-option><span>{{ 'common.all' | translate }}</span></hcs-option>
         <hcs-option *ngFor="let o of (StatusEnum | enumOptions)" [value]="o.value">{{ o.text }}</hcs-option>
       </hcs-select-input>
       <div class="buttons">
@@ -56,11 +56,11 @@ export class InvoiceListComponent extends BaseListComponent<Invoice> {
       </div>
     </ng-container>
 
-    <!-- 欄位 -->
-    <ng-container *hcsDataGridColum="let value;let entity=entity;field:'No';export:true,name:'單號'">
+    <!-- 欄位;name 是欄頭 i18n key,過 |translate(不硬寫字串) -->
+    <ng-container *hcsDataGridColum="let value;let entity=entity;field:'No';export:true,name:'models.Sales.Invoice.No'|translate">
       <a [routerLink]="[entity.Id]" queryParamsHandling="merge">{{ value }}</a>
     </ng-container>
-    <ng-container *hcsDataGridColum="let value;field:'Amount';align:'right';export:true,name:'金額'">{{ value }}</ng-container>
+    <ng-container *hcsDataGridColum="let value;field:'Amount';align:'right';export:true,name:'models.Sales.Invoice.Amount'|translate">{{ value }}</ng-container>
     <!-- 行操作(編輯 / 刪除 / 複製) -->
     <ng-container *hcsDataGridColum="let value;width:125;field:'Id';name:'';sortable:false">
       <hcs-default-button-list [data]="data" [key]="value"></hcs-default-button-list>
@@ -85,7 +85,7 @@ export class InvoiceListComponent extends BaseListComponent<Invoice> {
 | 參數 | 作用 |
 |---|---|
 | `field:'No'` | 對應 entity 欄位;**支援點路徑** `'Customer.Name'`(自動逐層取值) |
-| `name:'單號'` | 欄頭文字(可接 `\| translate`) |
+| `name:'models.Sales.Invoice.No'` | 欄頭 i18n key(接 `\| translate`;不硬寫字串) |
 | `width` / `align` / `phoneAlign` | 寬度 / 桌面對齊 / 手機對齊 |
 | `orderby:'X'` | 排序時改用別的欄位(預設用 `field`) |
 | `sortable:false` | 關閉該欄排序 |
@@ -116,13 +116,14 @@ URL `?$field=值` 預填查詢條件、`?$$field=值` 預填並鎖死查詢欄�
 - **預設**:給 `field`(省略則用 control name)+ `operator`(`contains` / `=` / `in` …)+ 選用 `valueTransform`;空值自動略過,組成 `ds.where(field, operator, value)`。
 
   ```html
-  <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label>單號</label></hcs-textbox-input>
+  <hcs-textbox-input formControlName="No" hcsDataGridQuery operator="contains"><label translate>models.Sales.Invoice.No</label></hcs-textbox-input>
   ```
 
 - **客製**:`[hcsDataGridQuery]="自訂fn"` 傳 `DataGridQuery<T>` 函式 `(ds, next) => next(改過的 ds)`,自接多欄 OR / 範圍 / 運算式 filter 等非標準查詢。
 
   ```html
-  <hcs-textbox-input [hcsDataGridQuery]="searchNameOrCode"><label>名稱或代碼</label></hcs-textbox-input>
+  <!-- 複合語意 label(名稱或代碼)無單一欄位對應,用 components.{feature}.{item} 類別 key -->
+  <hcs-textbox-input [hcsDataGridQuery]="searchNameOrCode"><label translate>components.invoiceSearch.nameOrCode</label></hcs-textbox-input>
   ```
   ```typescript
   searchNameOrCode = (ds, next) => {
@@ -178,7 +179,7 @@ canSelect = (row: Invoice) => row.Status !== 'Closed';   // 已結案的不可�
 
 ```html
 <hcs-data-grid [data]="data" [summaryData]="[{ Amount: totalAmount }]">
-  <ng-container *hcsDataGridColum="let value;let summary=summary;field:'Amount';align:'right',name:'金額'">
+  <ng-container *hcsDataGridColum="let value;let summary=summary;field:'Amount';align:'right',name:'models.Sales.Invoice.Amount'|translate">
     <strong *ngIf="summary">合計:{{ value }}</strong>
     <ng-container *ngIf="!summary">{{ value }}</ng-container>
   </ng-container>

@@ -41,15 +41,17 @@ export class InvoiceFormComponent extends BaseFormComponent<Invoice> {
 3. **template**:`<hcs-form-page [formGroup]="formGroup" [dataSource]="datasource">` 內用 `<hcs-form-row>` 排欄位元件。
 
 ```html
-<hcs-form-page [formGroup]="formGroup" [dataSource]="datasource" fieldI18nPrefix="models.Sales.Invoice">
+<hcs-form-page [formGroup]="formGroup" [dataSource]="datasource">
   <hcs-form-row>
-    <hcs-textbox-input formControlName="No" required><label>單號</label></hcs-textbox-input>
-    <hcs-textbox-input formControlName="Amount" type="number"><label>金額</label></hcs-textbox-input>
+    <hcs-textbox-input formControlName="No" required><label translate>models.Sales.Invoice.No</label></hcs-textbox-input>
+    <hcs-textbox-input formControlName="Amount" type="number"><label translate>models.Sales.Invoice.Amount</label></hcs-textbox-input>
   </hcs-form-row>
 </hcs-form-page>
 ```
 
-基本輸入欄位用 `hcs-*-input`,逐項參考見 [controls](controls.md)。
+**`<label>` 的字用 `translate` 指令 + i18n key**(`<label translate>models.…</label>`),不硬寫字串——欄位標籤走語系檔,連後端刪除擋關聯 / 驗證錯誤的訊息都靠字典 key(見 [i18n-system](../core/i18n-system.md))。基本輸入欄位用 `hcs-*-input`,逐項參考見 [controls](controls.md)。
+
+> ⚠️ **欄位 key 走「功能碼路徑」,`fieldI18nPrefix` 預設就命中,一般不必覆寫。** 慣例是把欄位 key 放 `models.{功能碼}.{Field}`(功能碼如 `Sales.Invoice` → `models.Sales.Invoice.No`),而 `fieldI18nPrefix` 預設正是 `models.{功能碼}`——兩者對齊,所以上面的 form **不給** `[fieldI18nPrefix]`。**只有字典路徑刻意偏離預設時才明給覆寫**:例如共用平台內建 model(`models.BaseModels.*`)、或欄位訊息借用對話框類別 key(`dialog.changePassword`)。覆寫錯或該給沒給,**後端驗證錯誤會翻不出欄位名**(顯示 raw key)——這是這個屬性唯一該登場的時機。
 
 ---
 
@@ -77,7 +79,7 @@ export class InvoiceFormComponent extends BaseFormComponent<Invoice> {
 | 屬性 | 預設 | 作用 |
 |---|---|---|
 | `formGroup` / `dataSource` | — | 必給;reactive form 與資料來源 |
-| `fieldI18nPrefix` | `models.<功能碼>` | 欄位標籤 / 錯誤訊息的 i18n 前綴 |
+| `fieldI18nPrefix` | `models.<功能碼>` | 欄位標籤 / 錯誤訊息的 i18n 前綴;欄位 key 依慣例放 `models.<功能碼>` 時預設即命中,**只有字典路徑刻意偏離預設(如共用 `models.BaseModels.*`)才覆寫**(見上方 ⚠️) |
 | `backWhenSaved` | `true` | 存檔成功後自動返回列表 |
 | `backToView` | `false` | 返回時去檢視頁而非列表 |
 | `showBackButton` / `showCopyButton` / `showModifyButton` / `showResetButton` | `true` | 工具列按鈕開關 |
@@ -117,9 +119,9 @@ openEdit(id: number) {
 挑另一個 entity 當外鍵。值是被選 entity 的主鍵;`(entityChange)` 另外吐出整個被選 entity。`[pickerSetting]` 給彈窗挑選、`[searchSetting]` 給打字搜尋(autocomplete)——**有無 searchSetting 決定 input 能否打字**:沒給就是唯讀、只能按放大鏡開彈窗。
 
 ```html
-<!-- picker + autocomplete;<label> 投影當欄位標題 -->
+<!-- picker + autocomplete;<label> 投影當欄位標題(i18n key,走 translate) -->
 <hcs-reference-input formControlName="CustomerId" [settings]="ref.customer" [autocompleteSearch]="true">
-  <label>客戶</label>
+  <label translate>models.Sales.Invoice.CustomerId</label>
 </hcs-reference-input>
 ```
 
@@ -181,11 +183,13 @@ component 注入為 `public ref: MyReferenceSettings`,template 綁 `ref.customer
 
 ```html
 <hcs-child-panel formControlName="Items" [type]="InvoiceItem">
-  <label>明細</label>
+  <!-- 面板標題無單一欄位對應,用 components.{feature}.{item} 類別 key -->
+  <label translate>components.invoiceItems.title</label>
   <ng-template let-row let-i="index">
     <!-- row($implicit)= 該列 FormGroup,外層已套好 [formGroup],直接 formControlName -->
-    <hcs-textbox-input formControlName="ProductName"><label>品名</label></hcs-textbox-input>
-    <hcs-textbox-input formControlName="Qty" type="number"><label>數量</label></hcs-textbox-input>
+    <!-- 子欄位對應子 entity InvoiceItem,走它自己的功能碼路徑 -->
+    <hcs-textbox-input formControlName="ProductName"><label translate>models.Sales.InvoiceItem.ProductName</label></hcs-textbox-input>
+    <hcs-textbox-input formControlName="Qty" type="number"><label translate>models.Sales.InvoiceItem.Qty</label></hcs-textbox-input>
   </ng-template>
 </hcs-child-panel>
 ```
