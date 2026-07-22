@@ -177,6 +177,46 @@ component 注入為 `public ref: MyReferenceSettings`,template 綁 `ref.customer
 - **後端權限**:picker 打的是「被參照 entity」的 Get/Query——把它們追加進**本頁功能**的 View 權限(self-contained),使用者不用另拿被參照 entity 的權限,見 [core/permissions](../core/permissions.md) 的判準節。
 - 多選變體 `hcs-tag-reference`:`[refSettings]="{picker, search}"` + `[data]`(選定實體陣列,就地增刪並 emit `(change)`),另有 `layout`、`createNewDatasource`+`getNewModelFn`(查無時建新資料)。
 
+#### 多個 reference 收在同一個 service + `entityChange` 連動
+
+一頁常有不只一個外鍵欄(部門、經辦、幣別…)。**把它們的 picker/search 全收斂進同一個 `@Injectable`**,每個外鍵一個屬性(各自 `{ picker, search }` 成對),component 注入一次、template 各綁各的:
+
+```typescript
+@Injectable({ providedIn: 'any' })
+export class SampleReferenceSettings {
+  department: { picker: IReferencePickerSettings, search: IReferenceSearchSettings };
+  employeeDirectory: { picker: IReferencePickerSettings, search: IReferenceSearchSettings };
+
+  constructor(dsFactory: DataSourceFactory) {
+    const departmentDs = dsFactory.getDataSource(Department);
+    // 需要就先 .where() 預過濾把 picker 範圍鎖小（如只挑啟用中的部門）：
+    // const activeDs = dsFactory.getDataSource(Department).where(x => x.IsActive, '=', true);
+    this.department = { picker: { /* … */ datasource: departmentDs }, search: { /* … */ datasource: departmentDs } };
+    // employeeDirectory 同理，接唯讀 View 端點……
+  }
+}
+```
+
+**`(entityChange)` 連動**——`hcs-reference-input` 值本身只是被選的**主鍵**;要拿**整個被選 entity** 做連動(帶出它的其他欄位、觸發別的邏輯)就聽 `(entityChange)`。它吐出被選 entity,**清除時吐 `null`**,handler 一律用 `?.` 收:
+
+```html
+<hcs-reference-input formControlName="DepartmentId" [settings]="ref.department" [autocompleteSearch]="true"
+  (entityChange)="onDepartmentChange($event)">
+  <label translate>models.Sample.Employee.DepartmentId</label>
+</hcs-reference-input>
+```
+
+```typescript
+selectedDepartmentCode: string | null = null;
+
+// $event 是被選部門 entity，清除選擇時為 null → 用 ?. 一併處理
+onDepartmentChange(department: { Code?: string } | null): void {
+  this.selectedDepartmentCode = department?.Code ?? null;
+}
+```
+
+選定即時就能顯示部門代號(不必再打一次 API 查——被選 entity 整包在手)。**別忘了 null**:使用者按清除鈕時 `$event` 是 `null`,少了 `?.` 會 runtime 炸。
+
 ### `hcs-child-panel` — 主檔明細(一對多)
 
 在同一張表單編輯子集合(對應後端 `SaveChildsFor`)。值是子物件陣列。給 `[type]` 子 entity 型別,它依該型別的屬性自動為每列建 `FormGroup`;子列版面用內容投影的 `<ng-template>`。

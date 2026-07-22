@@ -11,7 +11,7 @@
 ```csharp
 // 在模組的 Build 裡,moduleBuilder 上呼叫
 var sortApi = moduleBuilder.AddPostFlowApi<long, Invoice>("Invoice.Sort", b =>
-    b.GetRequestModel<Invoice>()        // HttpRequest → Invoice(反序列化 body)
+    b.GetRequestModel<Invoice>()        // HttpRequest → Invoice(取回 model-bind 的 input)
      .Pipe(MyPipes.ReorderInvoices)     // 你的業務步驟(見 pipe.md 的三種寫法)
      .Ok());                            // → 200 + 回傳值
 ```
@@ -26,7 +26,7 @@ var sortApi = moduleBuilder.AddPostFlowApi<long, Invoice>("Invoice.Sort", b =>
 
 > **副作用放哪。** 串在主 `flowBuilder` 內的步驟跑在交易內、**拿得到剛處理的 entity**,但一拋例外就 rollback、且只在驗證通過時跑。**通知 / 推送這類副作用非掛 `afterTransBuilder` 不可**:pipe 還在交易內時你**不知道後續會不會 rollback**,要「確定 commit 成功才通知」就只能等交易外(否則可能通知了之後被 rollback 掉、不存在的資料)。次要好處:長 async I/O(SignalR、寄信、call 外部 API)不卡在交易內 hold 著 DB 鎖。`afterTransBuilder` 在**交易外、commit 後**跑,但它的 pipe **從 `HttpRequest` 起步、不直接給你那筆 entity**。afterTrans 要拿 entity 兩條路:
 >
-> - **`GetRequestModel<T>()`** 重新反序列化 request body——拿到**送進來的形狀**(新增時還沒有 DB 配的 `Id` / audit)。
+> - **`GetRequestModel<T>()`** 讀回 controller 早先 model-bind 好的那筆 input(`InputRequestContext<T>.Input`,**不是**重新反序列化 body)——拿到**送進來的形狀**(新增時還沒有 DB 配的 `Id` / audit)。
 > - 主管線(交易內)`.RequestData().Set("k")` → afterTrans `.RequestData().GetIfExists<T>("k")`——把**存好的 entity**(含 `Id` / audit)帶過去;需先 `Services.AddRequestData()`(平台預設不註冊)+ 套件 `Hcs.Extensions.RequestData`。
 >
 > **何時跑 / null-guard:** afterTrans 只在 **commit 成功後**跑——主管線拋例外 → rollback **且 afterTrans 不跑**(不會拿到被 rollback 的 entity);但**驗證 400 不是例外**、交易照 commit、afterTrans **照跑**,此時 `pass` 分支沒執行,`GetIfExists` 回 **`null`**(`GetIfExists` 本就回 `default`,要 null-guard)。對應 entity API 的 `OnBeforeTransaction` / `OnAfterTransaction`,語意見 [entity-api](entity-api.md)。
@@ -41,7 +41,7 @@ var sortApi = moduleBuilder.AddPostFlowApi<long, Invoice>("Invoice.Sort", b =>
 
 | 組件 | 型別轉換 | 作用 |
 |---|---|---|
-| `GetRequestModel<TEntity>()` | `HttpRequest → TEntity` | 反序列化 request body |
+| `GetRequestModel<TEntity>()` | `HttpRequest → TEntity` | 取回 model-bind 的 input(`InputRequestContext<T>.Input`) |
 | `GetRequestKey<TKey>()` | `HttpRequest → TKey` | 取路由主鍵 |
 | `GetKeyAndModel<TKey,TEntity>()` | `HttpRequest → GetKeyAndModelOutput` | 主鍵 + model 都要時;回傳物件帶 `.Key` / `.Entity`(**不是** ValueTuple,別解構) |
 

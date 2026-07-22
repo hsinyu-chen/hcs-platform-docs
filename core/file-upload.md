@@ -46,7 +46,7 @@ b.AddEntityApi<long, Article>(opt =>
 3. **更新時清舊檔** — 舊 key 在 `OnKeySet` 先暫存(避免更新途中讀不到舊值),`OnUpdated` 才比對「舊 key 集合」與「新 key 集合」;被移除掉、**且沒有其他資料列還引用**的 key,**立即刪除**(內容 + 記錄)。刪除 entity 時 `OnDeleted` 同理清掉該列的檔。
 4. **孤兒清理** — `ClearUnConfirmed()` 刪掉**未確認(`Confirmed=false`)且上傳超過 1 天**的檔。這些是「上傳了但 entity 從沒存成功 / 使用者放棄」的暫存檔。
 
-> ⚠️ **`ClearUnConfirmed()` 不會自動跑**——平台只提供這個方法,**你要自己排程呼叫**(背景服務 / 排程工作 / `Hcs.Console` 定時任務)。不排,暫存孤兒檔會永久累積。
+> ⚠️ **`ClearUnConfirmed()` 不會自動跑**——平台只提供這個方法,**你要自己排程呼叫**(背景服務 / 排程工作 / `Hcs.Console` 定時任務)。不排,暫存孤兒檔會永久累積。背景服務骨架(scope 取 `DbContext`、`stoppingToken`、例外處理)見 [background-services](background-services.md)。
 >
 > CKEditor 那條(`ConfirmCkeditorImages`)只做「確認」、**沒有更新時的差異刪除**;內文裡被刪掉的圖只能靠上面的 1 天孤兒清理回收(前提是它一開始就沒被 confirm),已 confirm 的內嵌圖不會被自動清。
 
@@ -99,3 +99,4 @@ b.AddEntityApi<long, Article>(opt =>
 
 - `OnCreated` / `OnUpdated` / `OnDeleted` 這些掛載點怎麼來:[entity-api](entity-api.md)。
 - 底層的 `.Pipe(...)` 與 DI 注入:[pipe](pipe.md)。
+- 排程 `ClearUnConfirmed()` 的背景服務骨架:[background-services](background-services.md)。

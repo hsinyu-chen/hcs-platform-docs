@@ -37,6 +37,14 @@ public class Invoice : BaseModel              // = BaseModel<long>，已實作 I
 
 **要多租戶隔離**改繼承 `BaseOrganizedModel` **並自己加 `, IOrganized`**——`BaseOrganizedModel` 只給 `OrgId` 屬性、本身沒實作 `IOrganized`，少了那個介面就**有 OrgId 欄位卻不會被租戶過濾**。語意見 [core/multi-tenant](../core/multi-tenant.md)。
 
+> ⚠️ **型別對映:非必填欄位一律 nullable(含 string)。** host 專案開 `<Nullable>enable</Nullable>` 時,**非必填的 `string` 屬性必須寫 `string?`**——非 nullable 的 reference type 會被 ASP.NET Core 隱式當成 `[Required]`,前端送 `null` 就直接 400(`The X field is required.`)。這跟「非必填 value type(`int` / `decimal` / `DateTime`…)一律加 `?`」是同一個原因(前端沒填會送 `null`,non-nullable 反序列化就 400)。所以:
+>
+> - **必填** `string`:non-nullable + `= ""` 起始 → `public string No { get; set; } = "";`
+> - **非必填** `string`:`string?` → `public string? Phone { get; set; }`
+> - **非必填** value type:`?` → `public decimal? Amount { get; set; }`
+>
+> 走快速路徑 `create-hcs-entity` 時工具**已照此規則產出**(`required: true` → non-nullable + `= ""`、否則 `string?`),手寫時自己留意。
+
 ### 2. 往模組的 ModelConfig 加一行
 
 在既有 `SampleModelConfig.BuildModel` 裡加這顆 entity 的對應：

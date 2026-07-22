@@ -147,6 +147,7 @@ options.ConfigPostApi(x =>
 
 - API endpoint 混淆 middleware:前端可選擇把請求 URL(path / query)編碼,讓實際呼叫的 endpoint 不以明文出現(目的是混淆 API 介面、增加爬取/掃描成本,**非** request body 的資料加密)。
 - 檔案上傳 / 儲存:抽象 `IFileStorage`,內建本機磁碟與 **Azure Blob** 兩種後端(`UseLocalFileStroage` / `UseAzureBlobStorage`),含確認 / 孤兒清理生命週期(見 [core/file-upload.md](core/file-upload.md))。
+- 即時推播 / 多通道發訊:SignalR 組織分組推播(JWT query string token 已橋接、Hub 內服務限制)+ `IEmailMessage` / `ISmsMessage` / `IAndroidMessage` / `IIosMessage` 通道無關抽象(見 [core/realtime-and-messaging.md](core/realtime-and-messaging.md))。
 - `X-HCS-Server-Ts` response header — 統一伺服器時鐘給前端校時。
 - 分散式鎖(`Hcs.AtomLock.Generic`,SQL Server / MySQL / Redis)、快取過期時只讓單一請求重建以免一窩蜂打後端(cache stampede,`GetOrCreateAtomicAsync`)、一次性任務 idempotent 標記(`PlatformFlag`)。
 
@@ -216,7 +217,7 @@ options.ConfigPostApi(x =>
 |---|---|---|
 | `Hcs.Platform.Abstractions` | Platform 對外公開介面(權限/角色契約、`IPlatformUser` 等) | [validation](core/validation-errors.md) |
 | `Hcs.Platform.BaseModels` | 核心 entity(`PlatformUser` / `PlatformGroup` / `Organization` / `PlatformFlag`…) | [multi-tenant](core/multi-tenant.md) |
-| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[multi-tenant](core/multi-tenant.md)、[file-upload](core/file-upload.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
+| `Hcs.Platform.Core` | 平台主體:模組組裝、Generic Controller、Pipe builders、JWT、OData EdmModel、多租戶過濾 | [entity-api](core/entity-api.md)、[pipe](core/pipe.md)、[data-pipes](core/data-pipes.md)、[permissions](core/permissions.md)、[login](core/login.md)、[multi-tenant](core/multi-tenant.md)、[file-upload](core/file-upload.md)、[realtime-and-messaging](core/realtime-and-messaging.md)、[background-services](core/background-services.md)、[validation](core/validation-errors.md)、[i18n](core/i18n-system.md) |
 | `Hcs.Platform.Data` | 資料層共用契約(`ITable<T>` / `Table<T>` 與其擴充) | [data-pipes](core/data-pipes.md) |
 | `Hcs.Platform.Flow` | 通用 flow 引擎——被 ApprovalFlow 用,也可自行套用 | [approval-flow](modules/approval-flow.md) |
 
@@ -266,7 +267,7 @@ options.ConfigPostApi(x =>
 | `Hcs.Extensions.DependencyInjection` | 命名服務工廠(按名稱解析多實作) | — |
 | `Hcs.Extensions.EntityFrameworkCore` | DbSet / Queryable 擴充(主鍵篩選等) | — |
 | `Hcs.Extensions.MemoryCache` | `GetOrCreateAtomicAsync` 防 cache stampede | — |
-| `Hcs.Extensions.Message` / `.Email` / `.Android` / `.Ios` / `.Mitake` | 多通道發訊抽象 + SMTP / FCM / APNs / 三竹簡訊實作 | — |
+| `Hcs.Extensions.Message` / `.Email` / `.Android` / `.Ios` / `.Mitake` | 多通道發訊抽象 + SMTP / FCM / APNs / 三竹簡訊實作 | [realtime-and-messaging](core/realtime-and-messaging.md) |
 | `Hcs.Extensions.OdataClient` | OData 查詢 client(LINQ → OData URL) | — |
 | `Hcs.Extensions.RequestData` | HTTP request 資料字典 | — |
 | `Hcs.Extensions.SystemLogging` | 系統日誌服務(追蹤資料變更 / 商業行為) | [system-logging](modules/system-logging.md) |

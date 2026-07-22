@@ -43,6 +43,8 @@ description: HCS Platform（ASP.NET Core + Angular + OData + EF Core 的宣告�
 | 多租戶 | 組織樹 + 「讀能上下、寫只能往下」 | [core/multi-tenant](../core/multi-tenant.md) |
 | 登入 / Token | 多登入模式、JWT、即時撤銷、OrgKey | [core/login](../core/login.md) |
 | 檔案上傳 | `IFileStorage`（本機 / Azure Blob）+ 確認/孤兒清理 | [core/file-upload](../core/file-upload.md) |
+| 即時推播 / 發訊 | SignalR org 分組推播（token 已橋接）+ `IEmailMessage` 等多通道抽象 | [core/realtime-and-messaging](../core/realtime-and-messaging.md) |
+| 背景服務 | `BackgroundService` 骨架（scope 取服務 / `stoppingToken` / 例外）+ 哪些平台方法要自己排程 | [core/background-services](../core/background-services.md) |
 | i18n | 字典合併、link 語法、欄位名 key 前綴 | [core/i18n-system](../core/i18n-system.md) |
 
 ### 前端 SDK
